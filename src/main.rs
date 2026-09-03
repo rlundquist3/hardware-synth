@@ -2,6 +2,7 @@
 #![no_main]
 
 mod audio;
+mod engines;
 mod midi;
 mod oscillator;
 mod voices;
@@ -14,6 +15,7 @@ use embassy_time::Timer;
 
 use crate::{
     audio::f32_to_sample,
+    engines::fm::fm_synth_voice::FMSynthVoice,
     midi::notes::MIDI_NOTE_FREQS,
     oscillator::{Oscillator, Waveform},
 };
@@ -39,15 +41,15 @@ async fn chromatic_test(mut led: UserLed<'static>) {
     }
 }
 
-fn audio_output(osc: &mut Oscillator, output: &mut [u32]) {
+fn audio_output(voice: &mut FMSynthVoice, output: &mut [u32]) {
     let mut buf = [0; HALF_DMA_BUFFER_LENGTH];
 
     if let Some(new_freq) = FREQ.try_take() {
-        osc.set_freq(new_freq);
+        voice.set_fundamental_freq(new_freq);
     }
 
     buf.chunks_mut(2).for_each(|chunk| {
-        let sample = f32_to_sample(osc.next_sample());
+        let sample = f32_to_sample(voice.next().unwrap_or(0.0));
         chunk[0] = sample;
         chunk[1] = sample;
     });
@@ -70,14 +72,15 @@ async fn main(spawner: Spawner) {
     let mut led = board.user_led;
     led.on();
 
-    let mut osc = Oscillator::new(Waveform::Sine);
+    // let mut osc = Oscillator::new(Waveform::Sine);
+    let mut voice = FMSynthVoice::new();
 
     spawner.spawn(chromatic_test(led).unwrap());
 
     let mut interface = (interface.start_interface().await).unwrap();
     interface
         .start_callback(|_input, output| {
-            audio_output(&mut osc, output);
+            audio_output(&mut voice, output);
         })
         .await
         .unwrap();
