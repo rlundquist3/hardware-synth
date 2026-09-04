@@ -3,10 +3,12 @@
 
 mod amp_envelope;
 mod audio;
+mod effects;
 mod engines;
 mod midi;
 mod oscillator;
 mod parameter;
+mod utils;
 mod voices;
 
 use daisy_embassy::{audio::HALF_DMA_BUFFER_LENGTH, default_rcc, led::UserLed, new_daisy_board};
