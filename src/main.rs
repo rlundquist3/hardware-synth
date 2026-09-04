@@ -1,10 +1,12 @@
 #![no_std]
 #![no_main]
 
+mod amp_envelope;
 mod audio;
 mod engines;
 mod midi;
 mod oscillator;
+mod parameter;
 mod voices;
 
 use daisy_embassy::{audio::HALF_DMA_BUFFER_LENGTH, default_rcc, led::UserLed, new_daisy_board};
@@ -12,15 +14,15 @@ use defmt::info;
 use embassy_executor::Spawner;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::Timer;
+use {defmt_rtt as _, panic_probe as _};
 
 use crate::{
-    audio::f32_to_sample,
-    engines::fm::fm_synth_voice::FMSynthVoice,
-    midi::notes::MIDI_NOTE_FREQS,
-    oscillator::{Oscillator, Waveform},
+    audio::f32_to_sample, engines::fm::fm_synth_voice::FMSynthVoice, midi::notes::MIDI_NOTE_FREQS,
 };
 
-use {defmt_rtt as _, panic_probe as _};
+#[global_allocator]
+static ALLOCATOR: emballoc::Allocator<8192> = emballoc::Allocator::new();
+extern crate alloc;
 
 pub static SAMPLE_RATE: u32 = 44_100;
 
@@ -72,7 +74,6 @@ async fn main(spawner: Spawner) {
     let mut led = board.user_led;
     led.on();
 
-    // let mut osc = Oscillator::new(Waveform::Sine);
     let mut voice = FMSynthVoice::new();
 
     spawner.spawn(chromatic_test(led).unwrap());

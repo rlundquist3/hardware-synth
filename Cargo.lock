@@ -282,6 +282,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "emballoc"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f1cdcc6ee777565b5b04209526974a213a8f97879bdb314572265db86e3c63f"
+dependencies = [
+ "spin",
+]
+
+[[package]]
 name = "embassy-embedded-hal"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -666,6 +675,7 @@ dependencies = [
  "daisy-embassy",
  "defmt 1.1.1",
  "defmt-rtt",
+ "emballoc",
  "embassy-executor",
  "embassy-futures",
  "embassy-stm32",
@@ -940,6 +950,12 @@ name = "smallvec"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9be42f50aa861c555654aa3a37f52f4b1074bacf4e48fe0ef7fa584e80f1f0f"
+
+[[package]]
+name = "spin"
+version = "0.9.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3763264f6b73151db08c50ff20d7d8a0b8796e021cdea7ceedad07b80155fa0e"
 
 [[package]]
 name = "stable_deref_trait"
