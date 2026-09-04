@@ -11,7 +11,7 @@ use crate::{
     utils::db_to_linear_gain,
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Gain {
     gain_db: f32,
     gain_linear: f32,

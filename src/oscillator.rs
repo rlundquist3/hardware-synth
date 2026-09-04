@@ -1,7 +1,7 @@
 use core::f32::consts::PI;
 use micromath::F32Ext;
 
-use crate::{SAMPLE_RATE, voices::Voice};
+use crate::SAMPLE_RATE;
 
 #[derive(Clone, Debug)]
 pub enum Waveform {
@@ -62,12 +62,6 @@ impl Oscillator {
         match self.waveform {
             Sine => self.phase.sin(),
         }
-    }
-}
-
-impl Voice for Oscillator {
-    fn set_freq(&mut self, freq: f32) {
-        self.set_freq(freq);
     }
 }
 

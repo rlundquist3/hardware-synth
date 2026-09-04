@@ -1,9 +1,10 @@
 use crate::{
+    amp_envelope::AmpEnvelope,
     engines::fm::FreqRatio,
     oscillator::{Oscillator, Waveform::Sine},
     voices::Voice,
 };
-use core::f32::consts::PI;
+use core::{f32::consts::PI, sync::atomic::AtomicBool};
 use micromath::F32Ext;
 
 #[derive(Debug)]
@@ -15,12 +16,13 @@ pub struct FMSynthVoice {
     mod_osc: Oscillator,
     lfo_amp: f32,
     lfo: Oscillator,
-    // envelope: AmpEnvelope,
+    envelope: AmpEnvelope,
+    pub on: bool,
     // pub on: Arc<AtomicBool>,
 }
 
 impl FMSynthVoice {
-    pub fn new(/*envelope: AmpEnvelope*/) -> Self {
+    pub fn new(envelope: AmpEnvelope) -> Self {
         let mut lfo = Oscillator::new(Sine);
         lfo.set_freq(0.0);
 
@@ -32,7 +34,8 @@ impl FMSynthVoice {
             mod_osc: Oscillator::new(Sine),
             lfo_amp: 0.0,
             lfo,
-            // envelope,
+            envelope,
+            on: false,
             // on: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -63,17 +66,15 @@ impl FMSynthVoice {
     }
 
     pub fn set_should_release(&mut self) {
-        // self.envelope.set_should_release();
+        self.envelope.set_should_release();
     }
 
     pub fn get_releasing(&self) -> bool {
-        // self.envelope.get_releasing()
-        false
+        self.envelope.get_releasing()
     }
 
     pub fn get_release_complete(&self) -> bool {
-        // self.envelope.get_release_complete()
-        false
+        self.envelope.get_release_complete()
     }
 
     // fn get_mod_amp(self) -> f32 {
@@ -91,7 +92,8 @@ impl Clone for FMSynthVoice {
             mod_osc: self.mod_osc.clone(),
             lfo_amp: self.lfo_amp,
             lfo: self.lfo.clone(),
-            // envelope: self.envelope.clone(),
+            envelope: self.envelope.clone(),
+            on: false,
             // on: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -100,6 +102,10 @@ impl Clone for FMSynthVoice {
 impl Voice for FMSynthVoice {
     fn set_freq(&mut self, freq: f32) {
         self.set_fundamental_freq(freq);
+    }
+
+    fn set_on(&mut self, on: bool) {
+        self.on = on;
     }
 }
 
