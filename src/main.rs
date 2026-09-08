@@ -14,17 +14,29 @@ mod utils;
 mod voices;
 
 use core::cell::RefCell;
-use daisy_embassy::{default_rcc, new_daisy_board};
+
+use alloc::{format, string::ToString};
+use daisy_embassy::{
+    default_rcc,
+    hal::{self, bind_interrupts, peripherals},
+    new_daisy_board,
+};
 use embassy_executor::{InterruptExecutor, Spawner};
+use embassy_futures::join::join;
+use embassy_stm32::interrupt;
 use embassy_stm32::{
     bind_interrupts,
     i2c::{Config, I2c},
     interrupt::{InterruptExt, Priority},
+    usart, usb,
 };
-use embassy_stm32::{interrupt, usart};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_time::Timer;
+use embassy_usb;
+use embassy_usb::class::midi::MidiClass;
+use embassy_usb::driver::EndpointError;
 use ssd1306::{I2CDisplayInterface, Ssd1306, prelude::*};
+use static_cell::StaticCell;
 use {defmt_serial as _, panic_probe as _};
 
 use crate::{
@@ -44,6 +56,7 @@ extern crate alloc;
 pub static SAMPLE_RATE: u32 = 44_100;
 
 bind_interrupts!(struct Irqs {
+    OTG_FS => hal::usb::InterruptHandler<peripherals::USB_OTG_FS>;
     USART1 => usart::InterruptHandler<embassy_stm32::peripherals::USART1>;
 });
 
@@ -75,6 +88,7 @@ async fn main(low_priority_spawner: Spawner) {
     // End logger setup
 
     // Set up audio
+    // Start audio setup
     let audio_interface = board
         .audio_peripherals
         .prepare_interface(Default::default())
@@ -97,7 +111,7 @@ async fn main(low_priority_spawner: Spawner) {
     // Audio test
     low_priority_spawner.spawn(c_major().unwrap());
 
-    // Set up display
+    // Start display setup
     let i2c = I2c::new_blocking(
         peripherals.I2C1,
         board.pins.d11,
@@ -126,6 +140,80 @@ async fn main(low_priority_spawner: Spawner) {
         })
         .await;
     // End display setup
+
+    // Start MIDI setup
+    // let mut driver_config = usb::Config::default();
+    // driver_config.vbus_detection = false;
+
+    // static EP_OUT_BUFFER: StaticCell<[u8; 256]> = StaticCell::new();
+    // let ep_out_buffer = EP_OUT_BUFFER.init([0; 256]);
+
+    // let usb_driver = usb::Driver::new_fs(
+    //     board.usb_peripherals.usb_otg_fs,
+    //     Irqs,
+    //     board.usb_peripherals.pins.DP,
+    //     board.usb_peripherals.pins.DN,
+    //     ep_out_buffer,
+    //     driver_config,
+    // );
+
+    // let mut usb_config = embassy_usb::Config::new(0xdead, 0xc0de);
+    // usb_config.manufacturer = Some("Riley Lundquist");
+    // usb_config.product = Some("Hardware Synth");
+    // usb_config.serial_number = Some("0");
+
+    // let mut config_descriptor = [0; 256];
+    // let mut bos_descriptor = [0; 256];
+    // let mut control_buf = [0; 64];
+
+    // let mut builder = embassy_usb::Builder::new(
+    //     usb_driver,
+    //     usb_config,
+    //     &mut config_descriptor,
+    //     &mut bos_descriptor,
+    //     &mut [],
+    //     &mut control_buf,
+    // );
+    // let mut class = MidiClass::new(&mut builder, 1, 1, 64);
+    // let mut usb = builder.build();
+    // let usb_fut = usb.run();
+
+    // let midi_fut = async {
+    //     loop {
+    //         class.wait_connection().await;
+    //         let _ = midi_echo(&mut class).await;
+    //     }
+    // };
+
+    // join(usb_fut, midi_fut).await;
+    // End MIDI setup
+}
+
+struct Disconnected {}
+
+impl From<EndpointError> for Disconnected {
+    fn from(val: EndpointError) -> Self {
+        match val {
+            EndpointError::BufferOverflow => panic!("Buffer overflow"),
+            EndpointError::Disabled => Disconnected {},
+        }
+    }
+}
+
+async fn midi_echo<'d, T: usb::Instance + 'd>(
+    class: &mut MidiClass<'d, usb::Driver<'d, T>>,
+) -> Result<(), Disconnected> {
+    let mut buf = [0; 64];
+    loop {
+        let n = class.read_packet(&mut buf).await?;
+        let data = &buf[..n];
+        DISPLAY
+            .send(DisplayContent {
+                text: format!("{:?}", data),
+            })
+            .await;
+        class.write_packet(data).await?;
+    }
 }
 
 // TESTING STUFF
@@ -144,7 +232,11 @@ async fn c_major() {
     ];
 
     sender.send(updated);
-    DISPLAY.signal(DisplayContent { text: "C" });
+    DISPLAY
+        .send(DisplayContent {
+            text: "C".to_string(),
+        })
+        .await;
     Timer::after_millis(500).await;
 
     let updated = [
@@ -156,11 +248,27 @@ async fn c_major() {
     ];
 
     sender.send(updated);
-    DISPLAY.signal(DisplayContent { text: "C-E" });
+    DISPLAY
+        .send(DisplayContent {
+            text: "C-E".to_string(),
+        })
+        .await;
     Timer::after_millis(500).await;
 
     let updated = [(true, 60), (true, 64), (true, 67), (false, 60), (false, 60)];
 
     sender.send(updated);
-    DISPLAY.signal(DisplayContent { text: "C-E-G" });
+    DISPLAY
+        .send(DisplayContent {
+            text: "C-E-G".to_string(),
+        })
+        .await;
+
+    // for i in 0..10 {
+    //     DISPLAY
+    //         .send(DisplayContent {
+    //             text: format!("Test {}", i),
+    //         })
+    //         .await;
+    // }
 }

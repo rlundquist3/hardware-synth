@@ -1,5 +1,6 @@
+use alloc::{collections::VecDeque, string::String, vec::Vec};
 use embassy_stm32::i2c::I2c;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use embedded_graphics::{
     mono_font::{MonoTextStyle, ascii::FONT_6X10},
     pixelcolor::BinaryColor,
@@ -8,11 +9,11 @@ use embedded_graphics::{
 };
 use ssd1306::{Ssd1306, prelude::*};
 
-pub struct DisplayContent<'a> {
-    pub text: &'a str,
+pub struct DisplayContent {
+    pub text: String,
 }
 
-pub static DISPLAY: Signal<CriticalSectionRawMutex, DisplayContent> = Signal::new();
+pub static DISPLAY: Channel<CriticalSectionRawMutex, DisplayContent, 2> = Channel::new();
 
 const TEXT_STYLE: MonoTextStyle<'_, BinaryColor> = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
@@ -24,17 +25,33 @@ pub async fn display_handler(
         ssd1306::mode::BufferedGraphicsMode<DisplaySize128x64>,
     >,
 ) {
+    let mut displayed_messages: VecDeque<String> = VecDeque::new();
+
     loop {
-        let content = DISPLAY.wait().await;
+        let content = DISPLAY.receive().await;
+
+        if displayed_messages.len() > 6 {
+            displayed_messages.pop_front();
+        }
+        displayed_messages.push_back(content.text);
 
         display.clear_buffer();
-        let _ = Text::with_alignment(
-            content.text,
-            display.bounding_box().center(),
-            TEXT_STYLE,
-            Alignment::Center,
-        )
-        .draw(&mut display);
+
+        displayed_messages
+            .iter()
+            .enumerate()
+            .for_each(|(i, message)| {
+                let _ = Text::with_alignment(
+                    message,
+                    Point {
+                        x: 0,
+                        y: (10 * i as i32),
+                    },
+                    TEXT_STYLE,
+                    Alignment::Left,
+                )
+                .draw(&mut display);
+            });
 
         display.flush().unwrap();
     }
