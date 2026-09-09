@@ -25,7 +25,6 @@ use embassy_executor::{InterruptExecutor, Spawner};
 use embassy_futures::join::join;
 use embassy_stm32::interrupt;
 use embassy_stm32::{
-    bind_interrupts,
     i2c::{Config, I2c},
     interrupt::{InterruptExt, Priority},
     usart, usb,
