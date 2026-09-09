@@ -6,6 +6,7 @@ mod audio;
 mod display;
 mod effects;
 mod engines;
+mod logger;
 mod midi;
 mod oscillator;
 mod parameter;
@@ -13,11 +14,10 @@ mod utils;
 mod voices;
 
 use core::cell::RefCell;
-
 use daisy_embassy::{default_rcc, new_daisy_board};
-use defmt::info;
 use embassy_executor::{InterruptExecutor, Spawner};
 use embassy_stm32::{
+    bind_interrupts,
     i2c::{Config, I2c},
     interrupt::{InterruptExt, Priority},
 };
@@ -25,10 +25,12 @@ use embassy_stm32::{interrupt, usart};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_time::Timer;
 use ssd1306::{I2CDisplayInterface, Ssd1306, prelude::*};
-use static_cell::StaticCell;
 use {defmt_serial as _, panic_probe as _};
 
-use crate::audio::audio_handler;
+use crate::{
+    audio::audio_handler,
+    logger::{LOGGER, LogLevel, LogMessage, log_handler},
+};
 use crate::{
     display::{DISPLAY, DisplayContent, display_handler},
     engines::fm::{ENGINE, FMSynth, voice_state_handler},
@@ -41,8 +43,9 @@ extern crate alloc;
 
 pub static SAMPLE_RATE: u32 = 44_100;
 
-// static SERIAL: StaticCell<daisy_embassy::hal::usart::UartTx<'_, embassy_stm32::mode::Blocking>> =
-//     StaticCell::new();
+bind_interrupts!(struct Irqs {
+    USART1 => usart::InterruptHandler<embassy_stm32::peripherals::USART1>;
+});
 
 static AUDIO_EXECUTOR: InterruptExecutor = InterruptExecutor::new();
 
@@ -58,15 +61,18 @@ async fn main(low_priority_spawner: Spawner) {
     let peripherals = embassy_stm32::init(default_rcc());
     let board = new_daisy_board!(peripherals);
 
-    // let serial: usart::UartTx<'_, embassy_stm32::mode::Blocking> =
-    //     embassy_stm32::usart::UartTx::new_blocking(
-    //         peripherals.USART1,
-    //         board.pins.d13,
-    //         usart::Config::default(),
-    //     )
-    //     .unwrap();
-    // defmt_serial::defmt_serial(SERIAL.init(serial));
-    // info!("DOES IT WORK?");
+    // Start logger setup
+    let logger: usart::UartTx<'_, embassy_stm32::mode::Blocking> =
+        usart::UartTx::new_blocking(peripherals.USART1, board.pins.d13, usart::Config::default())
+            .unwrap();
+    low_priority_spawner.spawn(log_handler(logger).unwrap());
+    LOGGER
+        .send(LogMessage {
+            level: LogLevel::Info,
+            message: "==========================================",
+        })
+        .await;
+    // End logger setup
 
     // Set up audio
     let audio_interface = board
@@ -80,6 +86,12 @@ async fn main(low_priority_spawner: Spawner) {
     let high_priority_executor = AUDIO_EXECUTOR.start(interrupt::USART3);
     high_priority_executor.spawn(audio_handler(audio_interface, engine).unwrap());
     high_priority_executor.spawn(voice_state_handler(engine).unwrap());
+    LOGGER
+        .send(LogMessage {
+            level: LogLevel::Info,
+            message: "Audio Initialized",
+        })
+        .await;
     // End audio setup
 
     // Audio test
@@ -106,6 +118,13 @@ async fn main(low_priority_spawner: Spawner) {
     display.init().unwrap();
 
     low_priority_spawner.spawn(display_handler(display).unwrap());
+
+    LOGGER
+        .send(LogMessage {
+            level: LogLevel::Info,
+            message: "Display Initialized",
+        })
+        .await;
     // End display setup
 }
 
