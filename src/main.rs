@@ -17,15 +17,16 @@ use core::cell::RefCell;
 use daisy_embassy::{default_rcc, new_daisy_board};
 use defmt::info;
 use embassy_executor::{InterruptExecutor, Spawner};
-use embassy_stm32::interrupt;
 use embassy_stm32::{
     i2c::{Config, I2c},
     interrupt::{InterruptExt, Priority},
 };
+use embassy_stm32::{interrupt, usart};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_time::Timer;
 use ssd1306::{I2CDisplayInterface, Ssd1306, prelude::*};
-use {defmt_rtt as _, panic_probe as _};
+use static_cell::StaticCell;
+use {defmt_serial as _, panic_probe as _};
 
 use crate::audio::audio_handler;
 use crate::{
@@ -40,6 +41,9 @@ extern crate alloc;
 
 pub static SAMPLE_RATE: u32 = 44_100;
 
+// static SERIAL: StaticCell<daisy_embassy::hal::usart::UartTx<'_, embassy_stm32::mode::Blocking>> =
+//     StaticCell::new();
+
 static AUDIO_EXECUTOR: InterruptExecutor = InterruptExecutor::new();
 
 #[interrupt]
@@ -51,10 +55,18 @@ fn USART3() {
 
 #[embassy_executor::main]
 async fn main(low_priority_spawner: Spawner) {
-    info!("Entrypoint");
-
     let peripherals = embassy_stm32::init(default_rcc());
     let board = new_daisy_board!(peripherals);
+
+    // let serial: usart::UartTx<'_, embassy_stm32::mode::Blocking> =
+    //     embassy_stm32::usart::UartTx::new_blocking(
+    //         peripherals.USART1,
+    //         board.pins.d13,
+    //         usart::Config::default(),
+    //     )
+    //     .unwrap();
+    // defmt_serial::defmt_serial(SERIAL.init(serial));
+    // info!("DOES IT WORK?");
 
     // Set up audio
     let audio_interface = board
