@@ -26,6 +26,10 @@ panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 ssd1306 = "0.10.0"
 static_cell = "2.1.1"
 
+[build-dependencies]
+bindgen = "0.73.2"
+cc = "1.4.5"
+
 
 [profile.release]
 codegen-units = 1

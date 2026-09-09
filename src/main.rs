@@ -13,7 +13,7 @@ mod parameter;
 mod utils;
 mod voices;
 
-use core::cell::RefCell;
+use core::{cell::RefCell, ffi::c_int};
 
 use alloc::{format, string::ToString};
 use daisy_embassy::{
@@ -56,7 +56,7 @@ pub static SAMPLE_RATE: u32 = 44_100;
 
 bind_interrupts!(struct Irqs {
     OTG_FS => hal::usb::InterruptHandler<peripherals::USB_OTG_FS>;
-    USART1 => usart::InterruptHandler<embassy_stm32::peripherals::USART1>;
+    USART1 => usart::InterruptHandler<peripherals::USART1>;
 });
 
 static AUDIO_EXECUTOR: InterruptExecutor = InterruptExecutor::new();
@@ -66,6 +66,17 @@ fn USART3() {
     unsafe {
         AUDIO_EXECUTOR.on_interrupt();
     }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct TusbRhportInit {
+    role: c_int,
+    speed: c_int,
+}
+
+unsafe extern "C" {
+    fn tusb_rhport_init(rhport: u8, rh_init: *const TusbRhportInit) -> bool;
 }
 
 #[embassy_executor::main]
@@ -86,7 +97,6 @@ async fn main(low_priority_spawner: Spawner) {
         .await;
     // End logger setup
 
-    // Set up audio
     // Start audio setup
     let audio_interface = board
         .audio_peripherals
