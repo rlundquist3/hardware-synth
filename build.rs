@@ -3,8 +3,24 @@ use cc;
 use std::{env, path::PathBuf, process::Command};
 
 fn main() {
-    let includes = ["tinyusb", "tinyusb/src"];
+    println!("cargo:rerun-if-changed=tinyusb");
+
+    let files = [
+        "tinyusb/src/tusb.c",
+        "tinyusb/src/common/tusb_fifo.c",
+        "tinyusb/src/host/usbh.c",
+        "tinyusb/src/class/midi/midi_host.c",
+        "tinyusb/src/portable/synopsys/dwc2/hcd_dwc2.c",
+        "tinyusb/src/portable/synopsys/dwc2/dwc2_common.c",
+    ];
+    let includes = [
+        "tinyusb",
+        "tinyusb/src",
+        "tinyusb/CMSIS_5/CMSIS/Core/Include",
+        "tinyusb/cmsis-device-h7/Include",
+    ];
     let flags = [
+        "-DSTM32H750xx",
         "-mcpu=cortex-m7",
         "-mthumb",
         "-mfloat-abi=hard",
@@ -12,8 +28,11 @@ fn main() {
     ];
 
     // Compile TinyUSB
-    cc::Build::new()
-        .file("tinyusb/src/tusb.c")
+    let mut cc_builder = cc::Build::new();
+    for f in files {
+        cc_builder.file(f);
+    }
+    cc_builder
         .includes(includes)
         .flags(flags)
         .compile("tinyusb");
@@ -35,6 +54,7 @@ fn main() {
         .use_core()
         .ctypes_prefix("core::ffi")
         .clang_args([
+            "-DSTM32H750xx",
             "--target=thumbv7em-none-eabihf",
             &format!("--sysroot={}", sysroot),
             &format!("-isystem{}/include", sysroot),
@@ -46,5 +66,5 @@ fn main() {
         .generate()
         .expect("Unable to generate bindings for tinyusb")
         .write_to_file(out_path.join("tinyusb_bindings.rs"))
-        .expect("Couldn't write bindings!");
+        .expect("Unable to write bindings file for tinyusb");
 }
