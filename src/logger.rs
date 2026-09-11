@@ -1,4 +1,7 @@
-use alloc::{format, string::String};
+use alloc::{
+    format,
+    string::{String, ToString},
+};
 use core::{
     fmt::{self, Write},
     write,
@@ -11,21 +14,35 @@ pub enum LogLevel {
     Info,
     Error,
 }
-pub struct LogMessage<'a> {
+pub struct LogMessage {
     pub level: LogLevel,
-    pub message: &'a str,
+    pub message: String,
 }
 
-impl fmt::Display for LogMessage<'_> {
+pub fn serial_log(message: &str) {
+    let _ = LOGGER.try_send(LogMessage {
+        level: LogLevel::Info,
+        message: message.to_string(),
+    });
+}
+
+pub fn serial_error(message: &str) {
+    let _ = LOGGER.try_send(LogMessage {
+        level: LogLevel::Error,
+        message: message.to_string(),
+    });
+}
+
+impl fmt::Display for LogMessage {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.level {
-            LogLevel::Info => f.write_str(self.message),
+            LogLevel::Info => f.write_str(&self.message),
             LogLevel::Error => f.write_str(&format!("ERROR: {}", self.message)),
         }
     }
 }
 
-pub static LOGGER: Channel<CriticalSectionRawMutex, LogMessage, 5> = Channel::new();
+pub static LOGGER: Channel<CriticalSectionRawMutex, LogMessage, 20> = Channel::new();
 
 #[embassy_executor::task]
 pub async fn log_handler(mut logger: UartTx<'static, embassy_stm32::mode::Blocking>) {

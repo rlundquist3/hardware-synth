@@ -25,6 +25,9 @@ fn main() {
         "-mthumb",
         "-mfloat-abi=hard",
         "-mfpu=fpv5-d16",
+        "-Os",
+        "-ffunction-sections",
+        "-fdata-sections",
     ];
 
     // Compile TinyUSB

@@ -32,6 +32,7 @@ cc = "1.4.5"
 
 
 [profile.release]
+panic = "abort"
 codegen-units = 1
 debug = 2
 debug-assertions = false
@@ -42,6 +43,7 @@ overflow-checks = false
 
 # cargo build/run
 [profile.dev]
+panic = "abort"
 codegen-units = 1
 debug = 2
 debug-assertions = true

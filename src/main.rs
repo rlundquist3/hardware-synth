@@ -36,7 +36,9 @@ use {defmt_serial as _, panic_probe as _};
 
 use crate::{
     audio::audio_handler,
-    logger::{LOGGER, LogLevel, LogMessage, log_handler},
+    logger::{log_handler, serial_log},
+    midi::{initialize_midi_host, usb_host_task},
+    tinyusb::{BOARD_TUH_RHPORT, tusb_int_handler},
 };
 use crate::{
     display::{DISPLAY, DisplayContent, display_handler},
@@ -63,6 +65,13 @@ fn USART3() {
     }
 }
 
+#[interrupt]
+fn OTG_FS() {
+    unsafe {
+        tusb_int_handler(BOARD_TUH_RHPORT, true);
+    }
+}
+
 #[embassy_executor::main]
 async fn main(low_priority_spawner: Spawner) {
     let peripherals = embassy_stm32::init(default_rcc());
@@ -73,12 +82,8 @@ async fn main(low_priority_spawner: Spawner) {
         usart::UartTx::new_blocking(peripherals.USART1, board.pins.d13, usart::Config::default())
             .unwrap();
     low_priority_spawner.spawn(log_handler(logger).unwrap());
-    LOGGER
-        .send(LogMessage {
-            level: LogLevel::Info,
-            message: "==========================================",
-        })
-        .await;
+
+    serial_log("================================");
     // End logger setup
 
     // Start audio setup
@@ -93,16 +98,23 @@ async fn main(low_priority_spawner: Spawner) {
     let high_priority_executor = AUDIO_EXECUTOR.start(interrupt::USART3);
     high_priority_executor.spawn(audio_handler(audio_interface, engine).unwrap());
     high_priority_executor.spawn(voice_state_handler(engine).unwrap());
-    LOGGER
-        .send(LogMessage {
-            level: LogLevel::Info,
-            message: "Audio Initialized",
-        })
-        .await;
+
+    serial_log("Audio Initialized");
     // End audio setup
 
     // Audio test
     low_priority_spawner.spawn(c_major().unwrap());
+
+    // Start MIDI setup
+    interrupt::OTG_FS.set_priority(Priority::P1);
+    unsafe {
+        interrupt::OTG_FS.enable();
+    }
+
+    low_priority_spawner.spawn(initialize_midi_host().unwrap());
+    low_priority_spawner.spawn(usb_host_task().unwrap());
+    serial_log("MIDI Initialized");
+    // End MIDI setup
 
     // Start display setup
     let i2c = I2c::new_blocking(
@@ -126,17 +138,8 @@ async fn main(low_priority_spawner: Spawner) {
 
     low_priority_spawner.spawn(display_handler(display).unwrap());
 
-    LOGGER
-        .send(LogMessage {
-            level: LogLevel::Info,
-            message: "Display Initialized",
-        })
-        .await;
+    serial_log("Display Initialized");
     // End display setup
-
-    // Start MIDI setup
-
-    // End MIDI setup
 }
 
 // TESTING STUFF
@@ -186,12 +189,4 @@ async fn c_major() {
             text: "C-E-G".to_string(),
         })
         .await;
-
-    // for i in 0..10 {
-    //     DISPLAY
-    //         .send(DisplayContent {
-    //             text: format!("Test {}", i),
-    //         })
-    //         .await;
-    // }
 }

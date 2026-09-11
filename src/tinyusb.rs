@@ -5,4 +5,6 @@
     dead_code
 )]
 
+pub const BOARD_TUH_RHPORT: u8 = 0;
+
 include!(concat!(env!("OUT_DIR"), "/tinyusb_bindings.rs"));
