@@ -17,6 +17,14 @@
 #include "host/usbh.h"
 #include "dwc2_common.h"
 
+// LOCAL PATCH: guards for upstream's unbounded spin-waits. Counters are defined
+// in Rust (src/midi/mod.rs) so they can be logged. Iteration cap is arbitrary
+// but far larger than any legitimate wait.
+#define TUSB_SPIN_GUARD 100000u
+extern volatile uint32_t TUSB_SPIN_CHANNEL_DISABLE;
+extern volatile uint32_t TUSB_SPIN_IN_TOKEN;
+extern volatile uint32_t TUSB_SPIN_RXFLVL;
+
   // Debug level for DWC2
   #define DWC2_DEBUG 2
 
@@ -204,8 +212,11 @@ TU_ATTR_ALWAYS_INLINE static inline bool channel_disable(const dwc2_regs_t* dwc2
       return true;
     }
   } else {
+    // LOCAL PATCH: upstream spins unbounded. A wedged core turns that into a
+    // permanent system hang at interrupt priority. Bound it and record it.
+    uint32_t guard = TUSB_SPIN_GUARD;
     while (0 == req_queue_avail(dwc2, is_period)) {
-      // blocking wait for request queue available
+      if (--guard == 0) { TUSB_SPIN_CHANNEL_DISABLE++; break; }
     }
   }
   channel->hcintmsk |= HCINT_HALTED;
@@ -289,8 +300,10 @@ TU_ATTR_ALWAYS_INLINE static inline uint16_t channel_enable(dwc2_regs_t* dwc2, d
 // select its frame only after request-queue space is available.
 TU_ATTR_ALWAYS_INLINE static inline uint16_t channel_send_in_token(dwc2_regs_t* dwc2, dwc2_channel_t* channel,
                                                                    bool next_periodic_frame) {
+  // LOCAL PATCH: see note in channel_disable() — bounded instead of unbounded.
+  uint32_t guard = TUSB_SPIN_GUARD;
   while (0 == req_queue_avail(dwc2, channel_is_periodic(channel->hcchar))) {
-    // blocking wait for request queue available
+    if (--guard == 0) { TUSB_SPIN_IN_TOKEN++; break; }
   }
   return channel_enable(dwc2, channel, next_periodic_frame);
 }
@@ -1816,8 +1829,11 @@ void hcd_int_handler(uint8_t rhport, bool in_isr) {
     // RXFLVL bit is read-only
     dwc2->gintmsk &= ~GINTSTS_RXFLVL; // disable RXFLVL interrupt while reading
 
+    // LOCAL PATCH: bounded — an RXFLVL that never clears would hang the ISR.
+    uint32_t guard = TUSB_SPIN_GUARD;
     do {
       handle_rxflvl_irq(rhport); // read all packets
+      if (--guard == 0) { TUSB_SPIN_RXFLVL++; break; }
     } while(dwc2->gintsts & GINTSTS_RXFLVL);
 
     dwc2->gintmsk |= GINTSTS_RXFLVL;

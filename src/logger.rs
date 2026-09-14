@@ -44,6 +44,7 @@ impl fmt::Display for LogMessage {
 
 pub static LOGGER: Channel<CriticalSectionRawMutex, LogMessage, 20> = Channel::new();
 
+// TODO: fix this so it doesn't allocate every time
 #[embassy_executor::task]
 pub async fn log_handler(mut logger: UartTx<'static, embassy_stm32::mode::Blocking>) {
     let mut s = String::new();

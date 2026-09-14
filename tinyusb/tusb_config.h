@@ -65,11 +65,11 @@
 //------------------------- Board Specific --------------------------+
 
 #ifndef BOARD_TUH_RHPORT
-#define BOARD_TUH_RHPORT      0
+#define BOARD_TUH_RHPORT      1
 #endif
 
 #ifndef BOARD_TUH_MAX_SPEED
-#define BOARD_TUH_MAX_SPEED   OPT_MODE_DEFAULT_SPEED
+#define BOARD_TUH_MAX_SPEED   OPT_MODE_FULL_SPEED
 #endif
 
 //--------------------------------------------------------------------+
