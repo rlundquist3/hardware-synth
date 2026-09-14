@@ -37,7 +37,7 @@ use defmt_serial as _;
 use crate::{
     audio::audio_handler,
     logger::{log_handler, serial_log},
-    midi::{USB_IRQ_COUNT, initialize_midi_host, usb_host_task},
+    midi::{initialize_midi_host, usb_host_task},
     tinyusb::{BOARD_TUH_RHPORT, tusb_int_handler},
 };
 use crate::{
@@ -160,9 +160,10 @@ fn UART4() {
     }
 }
 
+/// rhport 1 lives on USB1_OTG_HS, so the ISR is OTG_HS — not OTG_FS, which is
+/// the onboard USB-C connector.
 #[interrupt]
 fn OTG_HS() {
-    USB_IRQ_COUNT.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
     unsafe {
         tusb_int_handler(BOARD_TUH_RHPORT, true);
     }
