@@ -84,7 +84,7 @@ pub async fn usb_host_task() {
                 stalled_ticks = 0;
                 if attempts < MAX_RECOVERY_ATTEMPTS {
                     attempts += 1;
-                    serial_log("USB: enumeration stalled, reinitializing host");
+                    serial_log("USB enumeration stalled, reinitializing host");
                     reinitialize_host().await;
                 } else if attempts == MAX_RECOVERY_ATTEMPTS {
                     attempts += 1;

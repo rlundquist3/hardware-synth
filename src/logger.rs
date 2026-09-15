@@ -19,7 +19,7 @@ pub struct LogMessage {
 }
 
 impl LogMessage {
-    /// Push as much of the intended slice onto the allotted 256 bytes as fits, truncating the remainder
+    /// Pushes as much of the intended slice onto the allotted 256 bytes as fits, truncating the remainder
     pub fn new(level: LogLevel, message: &str) -> Self {
         let mut s = heapless::String::<LOG_CAPACITY>::new();
         for c in message.chars() {
