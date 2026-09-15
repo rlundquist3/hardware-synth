@@ -11,29 +11,26 @@ pub enum LogLevel {
     Info,
     Error,
 }
+const LOG_CAPACITY: usize = 256;
+
 pub struct LogMessage {
     pub level: LogLevel,
-    pub message: heapless::String<128>,
+    pub message: heapless::String<LOG_CAPACITY>,
 }
 
-pub fn serial_log(message: &str) {
-    let mut s = heapless::String::<128>::new();
-    let _ = s.push_str(message);
+impl LogMessage {
+    /// Push as much of the intended slice onto the allotted 256 bytes as fits, truncating the remainder
+    pub fn new(level: LogLevel, message: &str) -> Self {
+        let mut s = heapless::String::<LOG_CAPACITY>::new();
+        for c in message.chars() {
+            match s.push(c) {
+                Ok(()) => continue,
+                Err(_) => break,
+            }
+        }
 
-    let _ = LOGGER.try_send(LogMessage {
-        level: LogLevel::Info,
-        message: s,
-    });
-}
-
-pub fn serial_error(message: &str) {
-    let mut s = heapless::String::<128>::new();
-    let _ = s.push_str(message);
-
-    let _ = LOGGER.try_send(LogMessage {
-        level: LogLevel::Error,
-        message: s,
-    });
+        LogMessage { level, message: s }
+    }
 }
 
 impl fmt::Display for LogMessage {
@@ -46,6 +43,14 @@ impl fmt::Display for LogMessage {
             }
         }
     }
+}
+
+pub fn serial_log(message: &str) {
+    let _ = LOGGER.try_send(LogMessage::new(LogLevel::Info, message));
+}
+
+pub fn serial_error(message: &str) {
+    let _ = LOGGER.try_send(LogMessage::new(LogLevel::Error, message));
 }
 
 pub static LOGGER: Channel<CriticalSectionRawMutex, LogMessage, 20> = Channel::new();
