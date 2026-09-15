@@ -15,8 +15,8 @@ use embassy_time::Timer;
 use crate::{
     logger::{serial_error, serial_log},
     tinyusb::{
-        BOARD_TUH_RHPORT, tuh_midi_mount_cb_t, tuh_midi_stream_read, tuh_rhport_reset_bus,
-        tuh_task_ext, tusb_rhport_init, tusb_rhport_init_t, tusb_role_t_TUSB_ROLE_HOST,
+        BOARD_TUH_RHPORT, tuh_deinit, tuh_midi_mount_cb_t, tuh_midi_stream_read, tuh_task_ext,
+        tusb_rhport_init, tusb_rhport_init_t, tusb_role_t_TUSB_ROLE_HOST,
         tusb_speed_t_TUSB_SPEED_FULL,
     },
 };
@@ -25,9 +25,17 @@ pub mod notes;
 
 static MIDI_MOUNTED: AtomicBool = AtomicBool::new(false);
 
+const MAX_RECOVERY_ATTEMPTS: u8 = 3;
+
+const HOST_INIT: tusb_rhport_init_t = tusb_rhport_init_t {
+    role: tusb_role_t_TUSB_ROLE_HOST,
+    speed: tusb_speed_t_TUSB_SPEED_FULL,
+};
+
 #[embassy_executor::task]
 pub async fn usb_host_task() {
     let mut stalled_ticks: u32 = 0;
+    let mut attempts: u8 = 0;
 
     loop {
         unsafe {
@@ -37,26 +45,38 @@ pub async fn usb_host_task() {
         /*
          * If a controller was plugged in at boot and attempted to connect before
          * the host started, it won't be mounted. Wait ~3s and reset bus to mount
-         * controllers in these cases. (Only hit if something is plugged in)
+         * controllers in these cases.
+         * Only hit if something is plugged in, limited retry attempts.
          */
         let hprt = pac::USB_OTG_HS.hprt().read();
-        if hprt.pcsts() && hprt.pena() && !MIDI_MOUNTED.load(Ordering::Relaxed) {
+        let port_up = hprt.pcsts() && hprt.pena();
+        let mounted = MIDI_MOUNTED.load(Ordering::Relaxed);
+
+        if !port_up || mounted {
+            stalled_ticks = 0;
+            attempts = 0;
+        } else {
             stalled_ticks += 1;
             if stalled_ticks >= 15_000
-            /* 15k * 200 micro secs = 3s */
+            // 15k * 200 micro secs = 3s
             {
                 stalled_ticks = 0;
-                serial_log("USB: enumeration stalled, resetting bus");
-                unsafe {
-                    tuh_rhport_reset_bus(BOARD_TUH_RHPORT, true);
-                }
-                Timer::after_millis(20).await;
-                unsafe {
-                    tuh_rhport_reset_bus(BOARD_TUH_RHPORT, false);
+                if attempts < MAX_RECOVERY_ATTEMPTS {
+                    attempts += 1;
+                    serial_log("USB: enumeration stalled, reinitializing host");
+                    unsafe {
+                        tuh_deinit(BOARD_TUH_RHPORT);
+                    }
+                    Timer::after_millis(50).await;
+
+                    if !unsafe { tusb_rhport_init(BOARD_TUH_RHPORT, &HOST_INIT) } {
+                        serial_error("ERROR: host reinit failed");
+                    }
+                } else if attempts == MAX_RECOVERY_ATTEMPTS {
+                    attempts += 1;
+                    serial_error("ERROR: device attached but will not enumerate");
                 }
             }
-        } else {
-            stalled_ticks = 0;
         }
 
         // Timeout to yield to lower-priority tasks
@@ -93,12 +113,7 @@ pub fn initialize_midi_host(dn: Peri<'static, PB14>, dp: Peri<'static, PB15>) {
     mem::forget(dn);
     mem::forget(dp);
 
-    let host_init = tusb_rhport_init_t {
-        role: tusb_role_t_TUSB_ROLE_HOST,
-        speed: tusb_speed_t_TUSB_SPEED_FULL,
-    };
-
-    match unsafe { tusb_rhport_init(BOARD_TUH_RHPORT, &host_init) } {
+    match unsafe { tusb_rhport_init(BOARD_TUH_RHPORT, &HOST_INIT) } {
         true => serial_log("USB MIDI Host initialized"),
         false => serial_error("ERROR: tusb_rhport_init failed. Unable to set up MIDI Host"),
     }
