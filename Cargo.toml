@@ -20,6 +20,7 @@ embassy-stm32 = { version = "0.6.0", features = ["defmt", "stm32h750ib", "time-d
 embassy-sync = { version = "0.8.0", features = ["defmt"] }
 embassy-time = { version = "0.5.1", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768", "generic-queue-8"] }
 embedded-graphics = "0.8.2"
+heapless = "0.9.3"
 micromath = "2.1.0"
 ssd1306 = "0.10.0"
 static_cell = "2.1.1"

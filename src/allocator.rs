@@ -4,6 +4,10 @@ use emballoc::Allocator;
  *  Wrapper around emballoc's Allocator that disables interrupts during allocation,
  * preventing deadlocks if a low-priority task is allocating while a higher-priority
  * one attempts to interrupt.
+ *
+ * TODO: ultimately, it would be good to get rid of this and just use
+ * emballoc::Allocator out of the box. Feel out how DSP logic settles
+ * in and re-evaluate.
 */
 struct IrqSafeAllocator<const N: usize>(Allocator<N>);
 

@@ -804,6 +804,7 @@ dependencies = [
  "embassy-sync",
  "embassy-time",
  "embedded-graphics",
+ "heapless",
  "micromath",
  "ssd1306",
  "static_cell",

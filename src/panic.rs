@@ -16,7 +16,7 @@ impl core::fmt::Write for PanicUart {
     }
 }
 
-// Halt after letting the UART drain.
+// Halt after letting the UART drain
 fn fatal_halt() -> ! {
     while !USART1.isr().read().tc() {}
     loop {
@@ -26,9 +26,8 @@ fn fatal_halt() -> ! {
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    // We're already dead; take the UART regardless of who owns it.
     cortex_m::interrupt::disable();
-    let _ = write!(PanicUart, "\r\n\r\n*** PANIC ***\r\n{}\r\n", info);
+    let _ = write!(PanicUart, "\r\n\r\n====== PANIC ======\r\n{}\r\n", info);
     fatal_halt()
 }
 
@@ -38,7 +37,7 @@ unsafe fn HardFault(ef: &cortex_m_rt::ExceptionFrame) -> ! {
     cortex_m::interrupt::disable();
     let _ = write!(
         PanicUart,
-        "\r\n\r\n*** HARDFAULT ***\r\npc={:#010x} lr={:#010x} r0={:#010x} r1={:#010x} r2={:#010x} r3={:#010x}\r\n",
+        "\r\n\r\n====== HARDFAULT ======\r\npc={:#010x} lr={:#010x} r0={:#010x} r1={:#010x} r2={:#010x} r3={:#010x}\r\n",
         ef.pc(),
         ef.lr(),
         ef.r0(),
