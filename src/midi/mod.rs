@@ -36,6 +36,7 @@ const HOST_INIT: tusb_rhport_init_t = tusb_rhport_init_t {
 pub async fn usb_host_task() {
     let mut stalled_ticks: u32 = 0;
     let mut attempts: u8 = 0;
+    let mut port_dead_ticks: u32 = 0;
 
     loop {
         unsafe {
@@ -52,6 +53,26 @@ pub async fn usb_host_task() {
         let port_up = hprt.pcsts() && hprt.pena();
         let mounted = MIDI_MOUNTED.load(Ordering::Relaxed);
 
+        /*
+         * dwc2 disables the port if there is a babble error, which is not
+         * handled by TinyUSB. Attempt to reconnect if this happens.
+         *
+         * TODO: frequency of this error is likely related to quality of
+         * USB port wiring. Just let it ride for now, but something to keep
+         * an eye on when moving hardware past the prototype stage.
+         */
+        if mounted && hprt.pcsts() && !hprt.pena() {
+            port_dead_ticks += 1;
+            // brief timeout period ~1ms
+            if port_dead_ticks >= 50 {
+                port_dead_ticks = 0;
+                serial_error("USB port disabled, reinitializing host");
+                reinitialize_host().await;
+            }
+        } else {
+            port_dead_ticks = 0;
+        }
+
         if !port_up || mounted {
             stalled_ticks = 0;
             attempts = 0;
@@ -64,14 +85,7 @@ pub async fn usb_host_task() {
                 if attempts < MAX_RECOVERY_ATTEMPTS {
                     attempts += 1;
                     serial_log("USB: enumeration stalled, reinitializing host");
-                    unsafe {
-                        tuh_deinit(BOARD_TUH_RHPORT);
-                    }
-                    Timer::after_millis(50).await;
-
-                    if !unsafe { tusb_rhport_init(BOARD_TUH_RHPORT, &HOST_INIT) } {
-                        serial_error("ERROR: host reinit failed");
-                    }
+                    reinitialize_host().await;
                 } else if attempts == MAX_RECOVERY_ATTEMPTS {
                     attempts += 1;
                     serial_error("ERROR: device attached but will not enumerate");
@@ -84,11 +98,25 @@ pub async fn usb_host_task() {
     }
 }
 
+/// Tears down and reinitializes USB Host, forcing re-enumeration
+async fn reinitialize_host() {
+    unsafe {
+        tuh_deinit(BOARD_TUH_RHPORT);
+    }
+    MIDI_MOUNTED.store(false, Ordering::Relaxed);
+    Timer::after_millis(50).await;
+
+    match unsafe { tusb_rhport_init(BOARD_TUH_RHPORT, &HOST_INIT) } {
+        true => serial_log("USB host reinit successful"),
+        false => serial_error("USB host reinit failed"),
+    };
+}
+
 pub fn initialize_midi_host(dn: Peri<'static, PB14>, dp: Peri<'static, PB15>) {
     /*
      * TinyUSB's dwc2_clock_init() doesn't do anything on STM32. In order for host
      * to initialize, need to enable the USB 3.3V supply, peripheral clock, and
-     * DM/DP alternate function
+     * USB data pin alternate functions
      */
 
     // Enable VDD33USB voltage detector so STM32's USB transceiver knows it is powered (wait for usb33rdy)
