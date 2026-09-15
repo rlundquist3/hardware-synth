@@ -1,5 +1,8 @@
 use alloc::format;
-use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use core::{
+    mem,
+    sync::atomic::{AtomicBool, Ordering},
+};
 use embassy_stm32::{
     Peri,
     gpio::{AfType, Flex, OutputType, Speed},
@@ -10,7 +13,7 @@ use embassy_stm32::{
 use embassy_time::Timer;
 
 use crate::{
-    logger::serial_log,
+    logger::{serial_error, serial_log},
     tinyusb::{
         BOARD_TUH_RHPORT, tuh_midi_mount_cb_t, tuh_midi_stream_read, tuh_rhport_reset_bus,
         tuh_task_ext, tusb_rhport_init, tusb_rhport_init_t, tusb_role_t_TUSB_ROLE_HOST,
@@ -20,23 +23,7 @@ use crate::{
 
 pub mod notes;
 
-/// Set while a MIDI interface is mounted. Used to tell a healthy idle port from
-/// one that came up but never enumerated.
 static MIDI_MOUNTED: AtomicBool = AtomicBool::new(false);
-
-/// Incremented by the guards in hcd_dwc2.c when one of TinyUSB's unbounded
-/// spin-waits hits its iteration cap. Nonzero means the dwc2 core wedged.
-#[unsafe(no_mangle)]
-pub static TUSB_SPIN_CHANNEL_DISABLE: AtomicU32 = AtomicU32::new(0);
-#[unsafe(no_mangle)]
-pub static TUSB_SPIN_IN_TOKEN: AtomicU32 = AtomicU32::new(0);
-#[unsafe(no_mangle)]
-pub static TUSB_SPIN_RXFLVL: AtomicU32 = AtomicU32::new(0);
-
-/// How long the port may sit connected and enabled without a MIDI interface
-/// mounting before we pulse a bus reset. Enumeration normally completes in well
-/// under a second.
-const ENUM_TIMEOUT_TICKS: u32 = 15_000; // ~3s at 200us per tick
 
 #[embassy_executor::task]
 pub async fn usb_host_task() {
@@ -47,14 +34,17 @@ pub async fn usb_host_task() {
             tuh_task_ext(u32::MAX, false);
         }
 
-        // A device that is already plugged in at boot is powered and asserting
-        // its pull-up before the host starts, so TinyUSB sees an immediate
-        // attach rather than a clean plug event and enumeration sometimes never
-        // takes. Pulsing a bus reset does what replugging the cable does.
+        /*
+         * If a controller was plugged in at boot and attempted to connect before
+         * the host started, it won't be mounted. Wait ~3s and reset bus to mount
+         * controllers in these cases. (Only hit if something is plugged in)
+         */
         let hprt = pac::USB_OTG_HS.hprt().read();
         if hprt.pcsts() && hprt.pena() && !MIDI_MOUNTED.load(Ordering::Relaxed) {
             stalled_ticks += 1;
-            if stalled_ticks >= ENUM_TIMEOUT_TICKS {
+            if stalled_ticks >= 15_000
+            /* 15k * 200 micro secs = 3s */
+            {
                 stalled_ticks = 0;
                 serial_log("USB: enumeration stalled, resetting bus");
                 unsafe {
@@ -69,20 +59,19 @@ pub async fn usb_host_task() {
             stalled_ticks = 0;
         }
 
-        // TinyUSB's own examples call tuh_task() in a tight loop. We can't do
-        // that here — a busy-loop at P2 would starve thread mode — but 200us
-        // still pumps the enumeration state machine promptly.
+        // Timeout to yield to lower-priority tasks
         Timer::after_micros(200).await;
     }
 }
 
-pub fn initialize_midi_host(dm: Peri<'static, PB14>, dp: Peri<'static, PB15>) {
-    // TinyUSB's dwc2_clock_init() is a no-op on STM32: enabling the peripheral
-    // clock, the USB 3.3V supply, and the DM/DP alternate function is the board
-    // layer's job. Without it dwc2_core_init() fails its check_dwc2() assert.
+pub fn initialize_midi_host(dn: Peri<'static, PB14>, dp: Peri<'static, PB15>) {
+    /*
+     * TinyUSB's dwc2_clock_init() doesn't do anything on STM32. In order for host
+     * to initialize, need to enable the USB 3.3V supply, peripheral clock, and
+     * DM/DP alternate function
+     */
 
-    // VDD33USB is fed directly from the board's 3.3V rail, so enable the voltage
-    // detector and leave the internal regulator off.
+    // Enable VDD33USB voltage detector so STM32's USB transceiver knows it is powered (wait for usb33rdy)
     cortex_m::interrupt::free(|_| {
         pac::PWR.cr3().modify(|w| {
             w.set_usb33den(true);
@@ -93,26 +82,29 @@ pub fn initialize_midi_host(dm: Peri<'static, PB14>, dp: Peri<'static, PB15>) {
 
     rcc::enable_and_reset::<USB_OTG_HS>();
 
-    // PB14 = OTG_HS_DM, PB15 = OTG_HS_DP, both AF12.
-    // Forget the Flex handles — their Drop would set the pins back to disconnected.
+    // Set up pins for PHY
     let af = AfType::output(OutputType::PushPull, Speed::VeryHigh);
-    let mut dm = Flex::new(dm);
+    let mut dn = Flex::new(dn);
     let mut dp = Flex::new(dp);
-    dm.set_as_af_unchecked(12, af);
+    dn.set_as_af_unchecked(12, af);
     dp.set_as_af_unchecked(12, af);
-    core::mem::forget(dm);
-    core::mem::forget(dp);
+
+    // Forget these so they don't go out of scope and get dropped, which would cause the pins to disconnect
+    mem::forget(dn);
+    mem::forget(dp);
 
     let host_init = tusb_rhport_init_t {
         role: tusb_role_t_TUSB_ROLE_HOST,
         speed: tusb_speed_t_TUSB_SPEED_FULL,
     };
 
-    if !unsafe { tusb_rhport_init(BOARD_TUH_RHPORT, &host_init) } {
-        serial_log("ERROR: tusb_rhport_init failed");
+    match unsafe { tusb_rhport_init(BOARD_TUH_RHPORT, &host_init) } {
+        true => serial_log("USB MIDI Host initialized"),
+        false => serial_error("ERROR: tusb_rhport_init failed. Unable to set up MIDI Host"),
     }
 }
 
+/// TinyUSB MIDI Host mount callback override
 #[unsafe(no_mangle)]
 pub extern "C" fn tuh_midi_mount_cb(idx: u8, mount_cb_data: *const tuh_midi_mount_cb_t) {
     let data = unsafe { &*mount_cb_data };
@@ -123,12 +115,15 @@ pub extern "C" fn tuh_midi_mount_cb(idx: u8, mount_cb_data: *const tuh_midi_moun
     ));
 }
 
+/// TinyUSB MIDI Host munount callback override
 #[unsafe(no_mangle)]
 pub extern "C" fn tuh_midi_umount_cb(idx: u8) {
     MIDI_MOUNTED.store(false, Ordering::Relaxed);
     serial_log(&format!("MIDI unmounted: idx={}", idx));
 }
 
+/// TinyUSB MIDI Host rx callback override
+/// Handles incoming MIDI events and passes off to application logic (does not currently pass through)
 #[unsafe(no_mangle)]
 pub extern "C" fn tuh_midi_rx_cb(idx: u8, xferred_bytes: u32) {
     if xferred_bytes == 0 {
@@ -147,7 +142,7 @@ pub extern "C" fn tuh_midi_rx_cb(idx: u8, xferred_bytes: u32) {
             break;
         }
 
-        // TODO: parse into note on/off and drive VOICES instead of logging.
+        // TODO: handle MIDI events
         let mut line = format!("MIDI cable {} rx:", cable_num);
         for byte in &buf[..count] {
             line.push_str(&format!(" {:02x}", byte));
@@ -156,6 +151,7 @@ pub extern "C" fn tuh_midi_rx_cb(idx: u8, xferred_bytes: u32) {
     }
 }
 
+// Required by TinyUSB
 #[unsafe(no_mangle)]
 pub static SystemCoreClock: u32 = 480_000_000;
 

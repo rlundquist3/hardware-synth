@@ -19,11 +19,8 @@ embassy-futures = { version = "0.1.2" }
 embassy-stm32 = { version = "0.6.0", features = ["defmt", "stm32h750ib", "time-driver-tim5", "exti", "memory-x", "unstable-pac", "chrono"] }
 embassy-sync = { version = "0.8.0", features = ["defmt"] }
 embassy-time = { version = "0.5.1", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768", "generic-queue-8"] }
-embassy-usb = {version = "0.6.0", features = ["defmt"]}
 embedded-graphics = "0.8.2"
 micromath = "2.1.0"
-# panic-probe removed: it routes panics through defmt, and defmt-serial is never
-# initialized, so panics were completely silent. See the #[panic_handler] in main.rs.
 ssd1306 = "0.10.0"
 static_cell = "2.1.1"
 

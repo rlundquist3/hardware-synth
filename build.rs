@@ -5,6 +5,7 @@ use std::{env, path::PathBuf, process::Command};
 fn main() {
     println!("cargo:rerun-if-changed=tinyusb");
 
+    // TinyUSB files for USB MIDI host support
     let files = [
         "tinyusb/src/tusb.c",
         "tinyusb/src/common/tusb_fifo.c",
@@ -13,12 +14,16 @@ fn main() {
         "tinyusb/src/portable/synopsys/dwc2/hcd_dwc2.c",
         "tinyusb/src/portable/synopsys/dwc2/dwc2_common.c",
     ];
+
+    // TinyUSB and CMSIS headers to include for use with Embassy
     let includes = [
         "tinyusb",
         "tinyusb/src",
         "tinyusb/CMSIS_5/CMSIS/Core/Include",
         "tinyusb/cmsis-device-h7/Include",
     ];
+
+    // Compiler flags
     let flags = [
         "-DSTM32H750xx",
         "-mcpu=cortex-m7",
@@ -30,7 +35,7 @@ fn main() {
         "-fdata-sections",
     ];
 
-    // Compile TinyUSB
+    // Compile select TinyUSB files
     let mut cc_builder = cc::Build::new();
     for f in files {
         cc_builder.file(f);
