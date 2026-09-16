@@ -1,15 +1,10 @@
 use alloc::vec::Vec;
 use alloc::{format, vec};
-use core::cell::RefCell;
 use core::f32::consts::PI;
 use core::sync::atomic::Ordering;
-use embassy_sync::blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex};
-use static_cell::StaticCell;
 
 use crate::effects::gain::Gain;
-use crate::midi::util::get_pitch_bend_value;
-use crate::midi::{MidiMessage, util::MIDI_NOTE_FREQS};
-use crate::voices::{MIDI_BUFFER, Voice, Voices};
+use crate::voices::Voices;
 use crate::{
     amp_envelope::AmpEnvelope, effects::Effect, engines::fm::fm_synth_voice::FMSynthVoice,
     parameter::Parameter,
@@ -24,67 +19,6 @@ pub struct FreqRatio(pub f32, pub f32);
 
 const MOD_INDEX_OPTIONS: &[f32] = &[1.0, 2.0, PI, 4.0, 5.0, 2.0 * PI];
 const MOD_INDEX_RENDER: &[&str] = &["1", "2", "π", "4", "5", "2π"];
-
-pub static ENGINE: StaticCell<BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>> =
-    StaticCell::new();
-
-#[embassy_executor::task]
-pub async fn midi_buffer_handler(
-    engine: &'static BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
-) {
-    let receiver = MIDI_BUFFER.receiver();
-
-    loop {
-        let message = receiver.receive().await;
-
-        match message.0 {
-            128 => handle_note_off(engine, message).await,
-            144 => match message.2 {
-                0 => handle_note_off(engine, message).await,
-                _ => handle_note_on(engine, message).await,
-            },
-            224 => handle_pitch_bend(engine, get_pitch_bend_value(message)).await,
-            _ => {}
-        };
-    }
-}
-
-async fn handle_note_on(
-    engine: &'static BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
-    message: MidiMessage,
-) {
-    let MidiMessage(_status, note, _vel) = message;
-    engine.lock(|e| {
-        let mut engine = e.borrow_mut();
-
-        let voice = engine.voices.voice_on(note);
-        voice.set_freq(MIDI_NOTE_FREQS[note as usize], note as usize);
-        voice.on.store(true, Ordering::Relaxed);
-    });
-}
-
-async fn handle_note_off(
-    engine: &'static BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
-    message: MidiMessage,
-) {
-    let MidiMessage(_status, note, _vel) = message;
-    engine.lock(|e| {
-        let mut engine = e.borrow_mut();
-        if let Some(voice) = engine.voices.voice_off(note) {
-            voice.on.store(false, Ordering::Relaxed);
-        }
-    })
-}
-
-async fn handle_pitch_bend(
-    engine: &'static BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
-    bend: u16,
-) {
-    engine.lock(|e| {
-        let mut engine = e.borrow_mut();
-        engine.set_pitch_bend(bend);
-    })
-}
 
 #[derive(Debug)]
 pub struct FMSynth {

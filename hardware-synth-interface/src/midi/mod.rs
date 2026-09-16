@@ -1,3 +1,5 @@
+pub mod tasks;
+
 use alloc::format;
 use core::{
     mem,
@@ -10,6 +12,7 @@ use embassy_stm32::{
     peripherals::{PB14, PB15, USB_OTG_HS},
     rcc,
 };
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use embassy_time::Timer;
 
 use crate::{
@@ -19,13 +22,10 @@ use crate::{
         tusb_rhport_init, tusb_rhport_init_t, tusb_role_t_TUSB_ROLE_HOST,
         tusb_speed_t_TUSB_SPEED_FULL,
     },
-    voices::MIDI_BUFFER,
 };
+use synth_core::midi::MidiMessage;
 
-pub mod util;
-
-#[derive(Debug)]
-pub struct MidiMessage(pub u8, pub u8, pub u8);
+pub static MIDI_BUFFER: Channel<CriticalSectionRawMutex, MidiMessage, 16> = Channel::new();
 
 static MIDI_MOUNTED: AtomicBool = AtomicBool::new(false);
 

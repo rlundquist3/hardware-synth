@@ -2,19 +2,12 @@
 #![no_main]
 
 mod allocator;
-mod amp_envelope;
 mod audio;
 mod display;
-mod effects;
-mod engines;
 mod logger;
 mod midi;
-mod oscillator;
 mod panic;
-mod parameter;
 mod tinyusb;
-mod utils;
-mod voices;
 
 extern crate alloc;
 use core::cell::RefCell;
@@ -31,8 +24,9 @@ use embassy_stm32::{
     interrupt::{InterruptExt, Priority},
     usart,
 };
-use embassy_sync::blocking_mutex::Mutex as BlockingMutex;
+use embassy_sync::blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex};
 use ssd1306::{I2CDisplayInterface, Ssd1306, prelude::*};
+use static_cell::StaticCell;
 
 use crate::{
     audio::audio_handler,
@@ -42,10 +36,9 @@ use crate::{
 };
 use crate::{
     display::{DISPLAY, DisplayContent, display_handler},
-    engines::fm::{ENGINE, FMSynth, midi_buffer_handler},
+    midi::tasks::midi_buffer_handler,
 };
-
-pub static SAMPLE_RATE: u32 = 44_100;
+use synth_core::engines::fm::FMSynth;
 
 // Bind interrupt for USART1, used for serial logging
 bind_interrupts!(struct Irqs {
@@ -78,6 +71,9 @@ fn OTG_HS() {
         tusb_int_handler(BOARD_TUH_RHPORT, true);
     }
 }
+
+pub static ENGINE: StaticCell<BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>> =
+    StaticCell::new();
 
 /**
  * Task Priorities

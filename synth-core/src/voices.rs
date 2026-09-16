@@ -2,15 +2,10 @@ use alloc::{
     collections::{BTreeMap, VecDeque},
     vec::Vec,
 };
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
-
-use crate::midi::MidiMessage;
 
 pub trait Voice: Clone + Send + Iterator<Item = f32> {
     fn set_freq(&mut self, freq: f32, midi_note: usize);
 }
-
-pub static MIDI_BUFFER: Channel<CriticalSectionRawMutex, MidiMessage, 16> = Channel::new();
 
 #[derive(Clone, Debug)]
 pub struct Voices<T> {

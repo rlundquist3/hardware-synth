@@ -1,7 +1,7 @@
 use crate::{
     amp_envelope::AmpEnvelope,
     engines::fm::FreqRatio,
-    midi::util::{MIDI_NOTE_FREQS, get_linear_bent_freq},
+    midi::get_linear_bent_freq,
     oscillator::{Oscillator, Waveform::Sine},
     voices::Voice,
 };

@@ -1,4 +1,5 @@
-use crate::midi::MidiMessage;
+#[derive(Debug)]
+pub struct MidiMessage(pub u8, pub u8, pub u8);
 
 const NO_BEND: u16 = 8192;
 const MAX_BEND_UP: u16 = 16383;
