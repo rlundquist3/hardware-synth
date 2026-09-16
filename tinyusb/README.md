@@ -1,0 +1,1 @@
+TinyUSB source for calling from unsafe Rust. See https://docs.tinyusb.org or https://github.com/hathach/tinyusb for details. Additional headers from CMSIS and cmsis-device-h7 repos are also included to line things up with Rust/Embassy.

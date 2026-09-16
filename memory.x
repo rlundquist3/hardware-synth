@@ -1,5 +1,7 @@
 /**
- * See: https://github.com/electro-smith/libDaisy/blob/master/core/STM32H750IB_flash.lds
+ * BOOT_SRAM layout, for use with the Electrosmith Daisy bootloader.
+ *
+ * See: https://github.com/electro-smith/libDaisy/blob/master/core/STM32H750IB_sram.lds
  *      https://github.com/stm32-rs/stm32h7xx-hal/blob/master/memory.x
  *      https://github.com/mtthw-meyer/libdaisy-rust/blob/master/memory.x
  */
@@ -8,15 +10,19 @@
 
 MEMORY
 {
-    FLASH     (RX)  : ORIGIN = 0x08000000, LENGTH = 128K
+    INTFLASH  (RX)  : ORIGIN = 0x08000000, LENGTH = 128K
     DTCMRAM   (RWX) : ORIGIN = 0x20000000, LENGTH = 128K
-    SRAM      (RWX) : ORIGIN = 0x24000000, LENGTH = 512K
+    SRAM      (RWX) : ORIGIN = 0x24000000, LENGTH = 480K
     RAM_D2    (RWX) : ORIGIN = 0x30000000, LENGTH = 288K
     RAM_D3    (RWX) : ORIGIN = 0x38000000, LENGTH = 64K
     ITCMRAM   (RWX) : ORIGIN = 0x00000000, LENGTH = 64K
     SDRAM     (RWX) : ORIGIN = 0xc0000000, LENGTH = 64M
-    QSPIFLASH (RX)  : ORIGIN = 0x90000000, LENGTH = 8M
+    QSPIFLASH (RX)  : ORIGIN = 0x90040000, LENGTH = 7936K
 }
+
+/* cortex-m-rt's link.x places .vector_table/.text/.rodata in FLASH and
+ * .data/.bss in RAM (with .data's load address in FLASH). */
+REGION_ALIAS(FLASH, SRAM);
 
 /* stm32h7xx-hal uses a PROVIDE that expects RAM symbol to exist */
 REGION_ALIAS(RAM, DTCMRAM);

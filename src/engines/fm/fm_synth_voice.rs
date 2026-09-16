@@ -4,6 +4,7 @@ use crate::{
     oscillator::{Oscillator, Waveform::Sine},
     voices::Voice,
 };
+use alloc::sync::Arc;
 use core::{f32::consts::PI, sync::atomic::AtomicBool};
 use micromath::F32Ext;
 
@@ -17,8 +18,8 @@ pub struct FMSynthVoice {
     lfo_amp: f32,
     lfo: Oscillator,
     envelope: AmpEnvelope,
-    pub on: bool,
-    // pub on: Arc<AtomicBool>,
+
+    pub on: Arc<AtomicBool>,
 }
 
 impl FMSynthVoice {
@@ -35,8 +36,7 @@ impl FMSynthVoice {
             lfo_amp: 0.0,
             lfo,
             envelope,
-            on: false,
-            // on: Arc::new(AtomicBool::new(false)),
+            on: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -93,8 +93,7 @@ impl Clone for FMSynthVoice {
             lfo_amp: self.lfo_amp,
             lfo: self.lfo.clone(),
             envelope: self.envelope.clone(),
-            on: false,
-            // on: Arc::new(AtomicBool::new(false)),
+            on: Arc::new(AtomicBool::new(false)),
         }
     }
 }
@@ -104,9 +103,9 @@ impl Voice for FMSynthVoice {
         self.set_fundamental_freq(freq);
     }
 
-    fn set_on(&mut self, on: bool) {
-        self.on = on;
-    }
+    // fn set_on(&mut self, on: bool) {
+    //     self.on = on;
+    // }
 }
 
 impl Iterator for FMSynthVoice {
