@@ -22,7 +22,7 @@ use crate::{
     voices::MIDI_BUFFER,
 };
 
-pub mod notes;
+pub mod util;
 
 #[derive(Debug)]
 pub struct MidiMessage(pub u8, pub u8, pub u8);

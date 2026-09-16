@@ -7,8 +7,8 @@ use embassy_sync::blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionR
 use static_cell::StaticCell;
 
 use crate::effects::gain::Gain;
-use crate::logger::serial_log;
-use crate::midi::{MidiMessage, notes};
+use crate::midi::util::get_pitch_bend_value;
+use crate::midi::{MidiMessage, util::MIDI_NOTE_FREQS};
 use crate::voices::{MIDI_BUFFER, Voice, Voices};
 use crate::{
     amp_envelope::AmpEnvelope, effects::Effect, engines::fm::fm_synth_voice::FMSynthVoice,
@@ -43,7 +43,8 @@ pub async fn midi_buffer_handler(
                 0 => handle_note_off(engine, message).await,
                 _ => handle_note_on(engine, message).await,
             },
-            _ => serial_log("unsupported status {message:?}"),
+            224 => handle_pitch_bend(engine, get_pitch_bend_value(message)).await,
+            _ => {}
         };
     }
 }
@@ -57,7 +58,7 @@ async fn handle_note_on(
         let mut engine = e.borrow_mut();
 
         let voice = engine.voices.voice_on(note);
-        voice.set_freq(notes::MIDI_NOTE_FREQS[note as usize]);
+        voice.set_freq(MIDI_NOTE_FREQS[note as usize], note as usize);
         voice.on.store(true, Ordering::Relaxed);
     });
 }
@@ -72,6 +73,16 @@ async fn handle_note_off(
         if let Some(voice) = engine.voices.voice_off(note) {
             voice.on.store(false, Ordering::Relaxed);
         }
+    })
+}
+
+async fn handle_pitch_bend(
+    engine: &'static BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
+    bend: u16,
+) {
+    engine.lock(|e| {
+        let mut engine = e.borrow_mut();
+        engine.set_pitch_bend(bend);
     })
 }
 
@@ -111,6 +122,12 @@ impl FMSynth {
             envelope,
             // effects,
         }
+    }
+
+    pub fn set_pitch_bend(&mut self, bend: u16) {
+        self.voices.voices.iter_mut().for_each(|voice| {
+            voice.set_pitch_bend(bend);
+        });
     }
 }
 

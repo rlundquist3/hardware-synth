@@ -1,6 +1,7 @@
 use crate::{
     amp_envelope::AmpEnvelope,
     engines::fm::FreqRatio,
+    midi::util::{MIDI_NOTE_FREQS, get_linear_bent_freq},
     oscillator::{Oscillator, Waveform::Sine},
     voices::Voice,
 };
@@ -10,6 +11,8 @@ use micromath::F32Ext;
 
 #[derive(Debug)]
 pub struct FMSynthVoice {
+    fund_freq: f32,
+    midi_note: usize,
     freq_ratio: FreqRatio,
     mod_index: f32,
     carrier_amp: f32,
@@ -28,6 +31,8 @@ impl FMSynthVoice {
         lfo.set_freq(0.0);
 
         FMSynthVoice {
+            fund_freq: 0.0,
+            midi_note: 0,
             freq_ratio: FreqRatio(1.0, 1.0),
             mod_index: PI,
             carrier_amp: 1.0,
@@ -40,7 +45,12 @@ impl FMSynthVoice {
         }
     }
 
-    pub fn set_fundamental_freq(&mut self, freq: f32) {
+    /// set frequency of carrier and modulation oscillators based on
+    /// fundamental frequency and frequency ratio
+    /// for modulation index I = C/M:
+    ///     carrier freq = C * fund freq
+    ///     mod freq = M * fund freq
+    pub fn set_osc_freqs(&mut self, freq: f32) {
         self.carrier_osc.set_freq(self.freq_ratio.0 as f32 * freq);
         self.mod_osc.set_freq(self.freq_ratio.1 as f32 * freq);
     }
@@ -65,6 +75,12 @@ impl FMSynthVoice {
         self.lfo.set_freq(freq);
     }
 
+    pub fn set_pitch_bend(&mut self, midi_bend: u16) {
+        let bent_freq = get_linear_bent_freq(self.midi_note, midi_bend, 2);
+
+        self.set_osc_freqs(bent_freq);
+    }
+
     pub fn set_releasing(&mut self) {
         self.envelope.set_releasing();
     }
@@ -85,6 +101,8 @@ impl FMSynthVoice {
 impl Clone for FMSynthVoice {
     fn clone(&self) -> Self {
         FMSynthVoice {
+            fund_freq: self.fund_freq,
+            midi_note: self.midi_note,
             freq_ratio: self.freq_ratio,
             mod_index: self.mod_index,
             carrier_amp: self.carrier_amp,
@@ -99,8 +117,11 @@ impl Clone for FMSynthVoice {
 }
 
 impl Voice for FMSynthVoice {
-    fn set_freq(&mut self, freq: f32) {
-        self.set_fundamental_freq(freq);
+    fn set_freq(&mut self, freq: f32, midi_note: usize) {
+        self.fund_freq = freq;
+        self.midi_note = midi_note;
+
+        self.set_osc_freqs(freq);
     }
 }
 

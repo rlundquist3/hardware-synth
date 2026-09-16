@@ -7,7 +7,7 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channe
 use crate::midi::MidiMessage;
 
 pub trait Voice: Clone + Send + Iterator<Item = f32> {
-    fn set_freq(&mut self, freq: f32);
+    fn set_freq(&mut self, freq: f32, midi_note: usize);
 }
 
 pub static MIDI_BUFFER: Channel<CriticalSectionRawMutex, MidiMessage, 16> = Channel::new();
