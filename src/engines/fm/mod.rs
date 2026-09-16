@@ -2,13 +2,14 @@ use alloc::vec::Vec;
 use alloc::{format, vec};
 use core::cell::RefCell;
 use core::f32::consts::PI;
-use embassy_sync::blocking_mutex::Mutex;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use core::sync::atomic::Ordering;
+use embassy_sync::blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex};
 use static_cell::StaticCell;
 
 use crate::effects::gain::Gain;
-use crate::midi::notes::MIDI_NOTE_FREQS;
-use crate::voices::{VOICES, Voice};
+use crate::logger::serial_log;
+use crate::midi::{MidiMessage, notes};
+use crate::voices::{MIDI_BUFFER, Voice, Voices};
 use crate::{
     amp_envelope::AmpEnvelope, effects::Effect, engines::fm::fm_synth_voice::FMSynthVoice,
     parameter::Parameter,
@@ -16,38 +17,67 @@ use crate::{
 
 pub mod fm_synth_voice;
 
+const VOICE_COUNT: usize = 5;
+
 #[derive(Clone, Copy, Debug)]
 pub struct FreqRatio(pub f32, pub f32);
 
 const MOD_INDEX_OPTIONS: &[f32] = &[1.0, 2.0, PI, 4.0, 5.0, 2.0 * PI];
 const MOD_INDEX_RENDER: &[&str] = &["1", "2", "π", "4", "5", "2π"];
 
-pub static ENGINE: StaticCell<Mutex<CriticalSectionRawMutex, RefCell<FMSynth>>> = StaticCell::new();
+pub static ENGINE: StaticCell<BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>> =
+    StaticCell::new();
 
 #[embassy_executor::task]
-pub async fn voice_state_handler(
-    engine: &'static Mutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
+pub async fn midi_buffer_handler(
+    engine: &'static BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
 ) {
-    let receiver = VOICES.receiver();
+    let receiver = MIDI_BUFFER.receiver();
 
-    if let Some(mut s) = receiver {
-        loop {
-            let states = s.changed().await;
+    loop {
+        let message = receiver.receive().await;
 
-            engine.lock(|e| {
-                let mut engine = e.borrow_mut();
-
-                states.iter().enumerate().for_each(|(i, state)| {
-                    engine.set_voice(i, *state);
-                });
-            })
-        }
+        match message.0 {
+            128 => handle_note_off(engine, message).await,
+            144 => match message.2 {
+                0 => handle_note_off(engine, message).await,
+                _ => handle_note_on(engine, message).await,
+            },
+            _ => serial_log("unsupported status {message:?}"),
+        };
     }
+}
+
+async fn handle_note_on(
+    engine: &'static BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
+    message: MidiMessage,
+) {
+    let MidiMessage(_status, note, _vel) = message;
+    engine.lock(|e| {
+        let mut engine = e.borrow_mut();
+
+        let voice = engine.voices.voice_on(note);
+        voice.set_freq(notes::MIDI_NOTE_FREQS[note as usize]);
+        voice.on.store(true, Ordering::Relaxed);
+    });
+}
+
+async fn handle_note_off(
+    engine: &'static BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
+    message: MidiMessage,
+) {
+    let MidiMessage(_status, note, _vel) = message;
+    engine.lock(|e| {
+        let mut engine = e.borrow_mut();
+        if let Some(voice) = engine.voices.voice_off(note) {
+            voice.on.store(false, Ordering::Relaxed);
+        }
+    })
 }
 
 #[derive(Debug)]
 pub struct FMSynth {
-    pub voices: Vec<FMSynthVoice>,
+    pub voices: Voices<FMSynthVoice>,
     headroom_gain: Gain,
     envelope: AmpEnvelope,
     parameters: Vec<Parameter>,
@@ -58,7 +88,7 @@ impl FMSynth {
     pub fn new() -> Self {
         let envelope = AmpEnvelope::new(0.3, 0.2, 0.8, 0.2);
         let signal_source = FMSynthVoice::new(envelope.clone());
-        let voices = (0..5).map(|_| signal_source.clone()).collect();
+        let voices = Voices::new((0..VOICE_COUNT).map(|_| signal_source.clone()).collect());
 
         // let mut effects: Vec<Box<dyn Effect>> = Vec::new();
 
@@ -82,30 +112,13 @@ impl FMSynth {
             // effects,
         }
     }
-
-    pub fn set_voice(&mut self, index: usize, (on, note): (bool, usize)) {
-        self.voices[index].set_on(on);
-        self.voices[index].set_freq(MIDI_NOTE_FREQS[note]);
-    }
 }
 
 impl Iterator for FMSynth {
     type Item = f32;
 
     fn next(&mut self) -> Option<f32> {
-        let raw = self.voices.iter_mut().fold(0.0, |acc: f32, voice| {
-            if voice.on {
-                acc + voice.next().unwrap_or(0.0)
-            } else if !voice.get_release_complete() {
-                if !voice.get_releasing() {
-                    voice.set_should_release();
-                }
-
-                acc + voice.next().unwrap_or(0.0)
-            } else {
-                acc
-            }
-        });
+        let raw = self.voices.next()?;
 
         let headroom_corrected = self.headroom_gain.process(raw);
         let sample =
@@ -116,6 +129,26 @@ impl Iterator for FMSynth {
                 .clamp(-1.0, 1.0);
 
         Some(sample)
+    }
+}
+
+impl Iterator for Voices<FMSynthVoice> {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<f32> {
+        Some(self.voices.iter_mut().fold(0.0, |acc: f32, voice| {
+            if voice.on.load(Ordering::Relaxed) {
+                acc + voice.next().unwrap_or(0.0)
+            } else if !voice.get_release_complete() {
+                if !voice.get_releasing() {
+                    voice.set_should_release();
+                }
+
+                acc + voice.next().unwrap_or(0.0)
+            } else {
+                acc
+            }
+        }))
     }
 }
 

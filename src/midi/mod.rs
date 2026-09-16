@@ -19,9 +19,13 @@ use crate::{
         tusb_rhport_init, tusb_rhport_init_t, tusb_role_t_TUSB_ROLE_HOST,
         tusb_speed_t_TUSB_SPEED_FULL,
     },
+    voices::MIDI_BUFFER,
 };
 
 pub mod notes;
+
+#[derive(Debug)]
+pub struct MidiMessage(pub u8, pub u8, pub u8);
 
 static MIDI_MOUNTED: AtomicBool = AtomicBool::new(false);
 
@@ -185,10 +189,18 @@ pub extern "C" fn tuh_midi_rx_cb(idx: u8, xferred_bytes: u32) {
             break;
         }
 
+        // TODO: handle additional bytes?
+        let midi_message = MidiMessage(buf[0], buf[1], buf[2]);
+        // TODO: dial in buffer size and figure out a way to elegantly handle errors
+        match MIDI_BUFFER.try_send(midi_message) {
+            Ok(()) => {}
+            Err(_) => serial_error("MIDI buffer full"),
+        };
+
         // TODO: handle MIDI events
         let mut line = format!("MIDI cable {} rx:", cable_num);
         for byte in &buf[..count] {
-            line.push_str(&format!(" {:02x}", byte));
+            line.push_str(&format!(" {}", byte));
         }
         serial_log(&line);
     }

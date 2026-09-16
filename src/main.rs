@@ -17,7 +17,6 @@ mod utils;
 mod voices;
 
 extern crate alloc;
-use alloc::string::ToString;
 use core::cell::RefCell;
 use daisy_embassy::{
     default_rcc,
@@ -32,8 +31,7 @@ use embassy_stm32::{
     interrupt::{InterruptExt, Priority},
     usart,
 };
-use embassy_sync::blocking_mutex::Mutex;
-use embassy_time::Timer;
+use embassy_sync::blocking_mutex::Mutex as BlockingMutex;
 use ssd1306::{I2CDisplayInterface, Ssd1306, prelude::*};
 
 use crate::{
@@ -44,8 +42,7 @@ use crate::{
 };
 use crate::{
     display::{DISPLAY, DisplayContent, display_handler},
-    engines::fm::{ENGINE, FMSynth, voice_state_handler},
-    voices::VOICES,
+    engines::fm::{ENGINE, FMSynth, midi_buffer_handler},
 };
 
 pub static SAMPLE_RATE: u32 = 44_100;
@@ -112,18 +109,15 @@ async fn main(low_priority_spawner: Spawner) {
         .prepare_interface(Default::default())
         .await;
     let audio_interface = (audio_interface.start_interface().await).unwrap();
-    let engine = ENGINE.init(Mutex::new(RefCell::new(FMSynth::new())));
+    let engine = ENGINE.init(BlockingMutex::new(RefCell::new(FMSynth::new())));
 
     interrupt::USART3.set_priority(Priority::P0);
     let audio_executor = AUDIO_EXECUTOR.start(interrupt::USART3);
     audio_executor.spawn(audio_handler(audio_interface, engine).unwrap());
-    audio_executor.spawn(voice_state_handler(engine).unwrap());
+    audio_executor.spawn(midi_buffer_handler(engine).unwrap());
 
     serial_log("Audio Initialized");
     // End audio setup
-
-    // Audio test
-    low_priority_spawner.spawn(c_major().unwrap());
 
     // Start MIDI setup
     interrupt::OTG_HS.set_priority(Priority::P1);
@@ -159,53 +153,4 @@ async fn main(low_priority_spawner: Spawner) {
 
     serial_log("Display Initialized");
     // End display setup
-}
-
-// TESTING STUFF
-#[embassy_executor::task]
-async fn c_major() {
-    let mut receiver = VOICES.receiver().unwrap();
-    let sender = VOICES.sender();
-
-    let _value = receiver.get().await;
-    let updated = [
-        (true, 60),
-        (false, 60),
-        (false, 60),
-        (false, 60),
-        (false, 60),
-    ];
-
-    sender.send(updated);
-    DISPLAY
-        .send(DisplayContent {
-            text: "C".to_string(),
-        })
-        .await;
-    Timer::after_millis(500).await;
-
-    let updated = [
-        (true, 60),
-        (true, 64),
-        (false, 60),
-        (false, 60),
-        (false, 60),
-    ];
-
-    sender.send(updated);
-    DISPLAY
-        .send(DisplayContent {
-            text: "C-E".to_string(),
-        })
-        .await;
-    Timer::after_millis(500).await;
-
-    let updated = [(true, 60), (true, 64), (true, 67), (false, 60), (false, 60)];
-
-    sender.send(updated);
-    DISPLAY
-        .send(DisplayContent {
-            text: "C-E-G".to_string(),
-        })
-        .await;
 }
