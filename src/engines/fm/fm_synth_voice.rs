@@ -65,8 +65,8 @@ impl FMSynthVoice {
         self.lfo.set_freq(freq);
     }
 
-    pub fn set_should_release(&mut self) {
-        self.envelope.set_should_release();
+    pub fn set_releasing(&mut self) {
+        self.envelope.set_releasing();
     }
 
     pub fn get_releasing(&self) -> bool {
@@ -102,10 +102,6 @@ impl Voice for FMSynthVoice {
     fn set_freq(&mut self, freq: f32) {
         self.set_fundamental_freq(freq);
     }
-
-    // fn set_on(&mut self, on: bool) {
-    //     self.on = on;
-    // }
 }
 
 impl Iterator for FMSynthVoice {
@@ -119,13 +115,11 @@ impl Iterator for FMSynthVoice {
             .next_phase_with_mod(self.lfo_amp * lfo_sample);
         let m = self.mod_osc.next_phase();
 
-        // let envelope_amp = match self.envelope.next() {
-        //     Some(amp) => amp,
-        //     None => 1.0,
-        // };
+        let envelope_amp = match self.envelope.next() {
+            Some(amp) => amp,
+            None => 1.0,
+        };
 
-        Some(
-            /*envelope_amp * */ self.carrier_amp * (c + self.mod_index * m.sin()).sin(),
-        )
+        Some(envelope_amp * self.carrier_amp * (c + self.mod_index * m.sin()).sin())
     }
 }

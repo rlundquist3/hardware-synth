@@ -21,5 +21,6 @@ unsafe impl<const N: usize> core::alloc::GlobalAlloc for IrqSafeAllocator<N> {
     }
 }
 
+// TODO: dial in reasonable heap size (should be < 128KB)
 #[global_allocator]
 static ALLOCATOR: IrqSafeAllocator<32_768> = IrqSafeAllocator(Allocator::new());

@@ -86,7 +86,7 @@ pub struct FMSynth {
 
 impl FMSynth {
     pub fn new() -> Self {
-        let envelope = AmpEnvelope::new(0.3, 0.2, 0.8, 0.2);
+        let envelope = AmpEnvelope::new(0.3, 0.2, 0.8, 0.3);
         let signal_source = FMSynthVoice::new(envelope.clone());
         let voices = Voices::new((0..VOICE_COUNT).map(|_| signal_source.clone()).collect());
 
@@ -141,7 +141,7 @@ impl Iterator for Voices<FMSynthVoice> {
                 acc + voice.next().unwrap_or(0.0)
             } else if !voice.get_release_complete() {
                 if !voice.get_releasing() {
-                    voice.set_should_release();
+                    voice.set_releasing();
                 }
 
                 acc + voice.next().unwrap_or(0.0)

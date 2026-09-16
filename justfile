@@ -4,3 +4,9 @@ flash-firmware:
 
 flash-bootloader:
     dfu-util -a 0 -s 0x08000000:leave -D dsy_bootloader_v6_4-intdfu-2000ms.bin -d ,0483:df11
+
+logs:
+    screen /dev/tty.usbmodem1302 115200
+
+docs:
+    cargo doc --open --document-private-items

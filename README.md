@@ -27,7 +27,7 @@ Once the bootloader is flashed, to flash the firmware:
 
 - hold "RESET" for a couple seconds and release
 - the "USER" LED should pulse
-- press the "BOOT" button
+- press and release the "BOOT" button
   - this just keeps it ready to flash; otherwise, there's a just a 2 second window
   - LED should keep pulsing
 - `just flash-firmware`
