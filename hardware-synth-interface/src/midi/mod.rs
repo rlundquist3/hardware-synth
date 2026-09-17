@@ -45,13 +45,6 @@ const HOST_INIT: tusb_rhport_init_t = tusb_rhport_init_t {
     speed: tusb_speed_t_TUSB_SPEED_FULL,
 };
 
-/**
- * The latched HPRT bits, snapshotted so transitions can be logged.
- *
- * `plsts` is deliberately not a field: it samples the raw D+/D- levels, which
- * toggle with bus traffic, so including it would make every poll look like a
- * change. It is read separately and reported alongside a real transition.
- */
 #[derive(PartialEq, Eq, Clone, Copy)]
 struct PortState {
     connected: bool,
@@ -61,37 +54,11 @@ struct PortState {
     speed: u8,
 }
 
-/// HPRT.PLSTS with both single-ended lines high: not a legal USB signaling state.
-const LINE_STATE_SE1: u8 = 0b11;
-
-/// Decodes HPRT.PLSTS, where bit 0 is the D+ level and bit 1 is D-.
-fn line_state_name(plsts: u8) -> &'static str {
-    match plsts {
-        0b00 => "SE0",
-        0b01 => "J",
-        0b10 => "K",
-        _ => "SE1",
-    }
-}
-
-/// Decodes HPRT.PSPD. Only meaningful while a device is connected.
-fn speed_name(pspd: u8) -> &'static str {
-    match pspd {
-        0 => "HS",
-        1 => "FS",
-        2 => "LS",
-        _ => "?",
-    }
-}
+// HPRT.PLSTS with both single-ended lines high: not a legal USB signaling state.
+const ERROR_LINE_STATE: u8 = 0b11;
 
 #[embassy_executor::task]
 pub async fn usb_host_task() {
-    /*
-     * Both recovery paths are timed from the instant their condition was first
-     * observed, not from a count of loop iterations -- the iteration rate varies
-     * with optimization settings and with how long tuh_task_ext() runs, so a
-     * counted timeout silently changes length whenever codegen changes.
-     */
     let mut stalled_since: Option<Instant> = None;
     let mut port_dead_since: Option<Instant> = None;
     let mut attempts: u8 = 0;
@@ -121,25 +88,6 @@ pub async fn usb_host_task() {
 
         let line_state = hprt.plsts();
 
-        // Report port transitions so a failed attach is distinguishable from no attach
-        if last_port != Some(port) {
-            serial_log(&format!(
-                "port: connected={} enabled={} powered={} overcurrent={} speed={} line={}",
-                port.connected as u8,
-                port.enabled as u8,
-                port.powered as u8,
-                port.overcurrent as u8,
-                speed_name(port.speed),
-                line_state_name(line_state),
-            ));
-
-            if port.overcurrent && !last_port.is_some_and(|previous| previous.overcurrent) {
-                serial_error("USB over-current tripped, port power cut by the core");
-            }
-
-            last_port = Some(port);
-        }
-
         /*
          * SE1 means D+ and D- are both high, which USB does not define. A short
          * between the pair reads this way: the device's 1.5k pullup against both
@@ -147,7 +95,7 @@ pub async fn usb_host_task() {
          * lines. Reported once per attach -- the line is sampled asynchronously
          * to bus traffic, so a single reading is not worth acting on.
          */
-        if port.connected && !mounted && line_state == LINE_STATE_SE1 && !se1_reported {
+        if port.connected && !mounted && line_state == ERROR_LINE_STATE && !se1_reported {
             se1_reported = true;
             serial_error("bus in SE1 (D+ and D- both high) -- check for a short across the pair");
         } else if !port.connected {
@@ -172,12 +120,6 @@ pub async fn usb_host_task() {
             port_dead_since = None;
         }
 
-        /*
-         * Armed on pcsts alone. pena is only set once the core has completed a
-         * port reset and speed detection, so keying recovery on it left the
-         * "attached but never enabled" case invisible -- the timer was cleared
-         * on every pass and neither this nor the give-up branch could ever run.
-         */
         if !port.connected || mounted {
             stalled_since = None;
             attempts = 0;
