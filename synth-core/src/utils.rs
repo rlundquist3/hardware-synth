@@ -32,3 +32,40 @@ pub fn sample_to_f32(y: u32) -> f32 {
     const SHIFT: u32 = 32 - SAMPLE_WIDTH_BITS;
     (((y << SHIFT) as i32) >> SHIFT) as f32 / SAMPLE_SCALE
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::db_to_linear_gain;
+    use approx::assert_relative_eq;
+
+    const GAIN_TOLERANCE: f32 = 0.01;
+
+    #[test]
+    fn no_gain() {
+        assert_relative_eq!(db_to_linear_gain(0.0), 1.0);
+    }
+    #[test]
+    fn positive_gain() {
+        assert_relative_eq!(
+            db_to_linear_gain(3.0),
+            2.0_f32.sqrt(),
+            max_relative = GAIN_TOLERANCE
+        );
+        assert_relative_eq!(db_to_linear_gain(6.0), 2.0, max_relative = GAIN_TOLERANCE);
+        assert_relative_eq!(db_to_linear_gain(12.0), 4.0, max_relative = GAIN_TOLERANCE);
+    }
+    #[test]
+    fn negative_gain() {
+        assert_relative_eq!(
+            db_to_linear_gain(-3.0),
+            2.0_f32.sqrt() / 2.0,
+            max_relative = GAIN_TOLERANCE
+        );
+        assert_relative_eq!(db_to_linear_gain(-6.0), 0.5, max_relative = GAIN_TOLERANCE);
+        assert_relative_eq!(
+            db_to_linear_gain(-12.0),
+            0.25,
+            max_relative = GAIN_TOLERANCE
+        );
+    }
+}
