@@ -5,6 +5,9 @@ flash-firmware:
 flash-bootloader:
     dfu-util -a 0 -s 0x08000000:leave -D dsy_bootloader_v6_4-intdfu-2000ms.bin -d ,0483:df11
 
+test-core:
+    cargo test -p synth-core --target aarch64-apple-darwin
+
 logs:
     screen /dev/tty.usbmodem1302 115200
 
