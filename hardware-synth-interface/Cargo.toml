@@ -46,23 +46,3 @@ synth-core = { path = "../synth-core" }
 [build-dependencies]
 bindgen = "0.73.2"
 cc = "1.4.5"
-
-[profile.release]
-panic = "abort"
-codegen-units = 1
-debug = 2
-debug-assertions = false
-incremental = false
-lto = 'fat'
-opt-level = 's'
-overflow-checks = false
-
-# cargo build/run
-[profile.dev]
-panic = "abort"
-codegen-units = 1
-debug = 2
-debug-assertions = true
-incremental = false
-opt-level = 3
-overflow-checks = true
