@@ -799,8 +799,6 @@ dependencies = [
 name = "hardware-synth-interface"
 version = "0.1.0"
 dependencies = [
- "bindgen",
- "cc",
  "cortex-m",
  "cortex-m-rt",
  "daisy-embassy",
@@ -813,6 +811,7 @@ dependencies = [
  "embassy-time",
  "embedded-graphics",
  "heapless",
+ "rust-tinyusb-host",
  "ssd1306",
  "static_cell",
  "synth-core",
@@ -1094,6 +1093,15 @@ name = "regex-syntax"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
+
+[[package]]
+name = "rust-tinyusb-host"
+version = "0.1.0"
+source = "git+https://github.com/rlundquist3/rust-tinyusb-host.git?rev=2e15a2f#2e15a2f0d73ee85572ead7c82e2afc0d9141639e"
+dependencies = [
+ "bindgen",
+ "cc",
+]
 
 [[package]]
 name = "rustc-hash"

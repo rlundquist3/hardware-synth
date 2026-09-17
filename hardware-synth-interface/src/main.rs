@@ -7,7 +7,6 @@ mod display;
 mod logger;
 mod midi;
 mod panic;
-mod tinyusb;
 
 extern crate alloc;
 use core::cell::RefCell;
@@ -31,13 +30,13 @@ use static_cell::StaticCell;
 use crate::{
     audio::audio_handler,
     logger::{log_handler, serial_log},
-    midi::{initialize_midi_host, usb_host_task},
-    tinyusb::{BOARD_TUH_RHPORT, tusb_int_handler},
+    midi::{BOARD_TUH_RHPORT, initialize_midi_host, usb_host_task},
 };
 use crate::{
     display::{DISPLAY, DisplayContent, display_handler},
     midi::tasks::midi_buffer_handler,
 };
+use rust_tinyusb_host::tusb_int_handler;
 use synth_core::engines::fm::FMSynth;
 
 // Bind interrupt for USART1, used for serial logging

@@ -15,19 +15,19 @@ use embassy_stm32::{
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use embassy_time::Timer;
 
-use crate::{
-    logger::{serial_error, serial_log},
-    tinyusb::{
-        BOARD_TUH_RHPORT, tuh_deinit, tuh_midi_mount_cb_t, tuh_midi_stream_read, tuh_task_ext,
-        tusb_rhport_init, tusb_rhport_init_t, tusb_role_t_TUSB_ROLE_HOST,
-        tusb_speed_t_TUSB_SPEED_FULL,
-    },
+use crate::logger::{serial_error, serial_log};
+use rust_tinyusb_host::{
+    tuh_deinit, tuh_midi_mount_cb_t, tuh_midi_stream_read, tuh_task_ext, tusb_rhport_init,
+    tusb_rhport_init_t, tusb_role_t_TUSB_ROLE_HOST, tusb_speed_t_TUSB_SPEED_FULL,
 };
 use synth_core::midi::MidiMessage;
 
 pub static MIDI_BUFFER: Channel<CriticalSectionRawMutex, MidiMessage, 16> = Channel::new();
 
 static MIDI_MOUNTED: AtomicBool = AtomicBool::new(false);
+
+// USB-A Port on pins D29 (D-) / D30 (D+) (onboard USB-C is port 0)
+pub const BOARD_TUH_RHPORT: u8 = 1;
 
 const MAX_RECOVERY_ATTEMPTS: u8 = 3;
 
