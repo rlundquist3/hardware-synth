@@ -811,6 +811,7 @@ dependencies = [
  "embassy-time",
  "embedded-graphics",
  "heapless",
+ "logger",
  "rust-tinyusb-host",
  "ssd1306",
  "static_cell",
@@ -875,6 +876,17 @@ name = "log"
 version = "0.4.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
+
+[[package]]
+name = "logger"
+version = "0.1.0"
+dependencies = [
+ "daisy-embassy",
+ "embassy-executor",
+ "embassy-stm32",
+ "embassy-sync",
+ "heapless",
+]
 
 [[package]]
 name = "loom"
@@ -1277,6 +1289,7 @@ name = "synth-core"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "logger",
  "micromath",
 ]
 

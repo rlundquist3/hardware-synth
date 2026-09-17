@@ -45,7 +45,7 @@ pub async fn display_handler(
                     message,
                     Point {
                         x: 0,
-                        y: (10 * i as i32),
+                        y: 10 + (10 * i as i32),
                     },
                     TEXT_STYLE,
                     Alignment::Left,

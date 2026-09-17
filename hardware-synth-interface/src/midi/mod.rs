@@ -13,9 +13,9 @@ use embassy_stm32::{
     rcc,
 };
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
-use embassy_time::Timer;
+use embassy_time::{Duration, Instant, Timer};
 
-use crate::logger::{serial_error, serial_log};
+use logger::{serial_error, serial_log};
 use rust_tinyusb_host::{
     tuh_deinit, tuh_midi_mount_cb_t, tuh_midi_stream_read, tuh_task_ext, tusb_rhport_init,
     tusb_rhport_init_t, tusb_role_t_TUSB_ROLE_HOST, tusb_speed_t_TUSB_SPEED_FULL,
@@ -31,16 +31,72 @@ pub const BOARD_TUH_RHPORT: u8 = 1;
 
 const MAX_RECOVERY_ATTEMPTS: u8 = 3;
 
+// How long an attached device may fail to enumerate before the host is reset.
+const ENUMERATION_TIMEOUT: Duration = Duration::from_secs(3);
+
+// How long the port may sit connected-but-disabled (dwc2 babble) before reset.
+const PORT_DEAD_TIMEOUT: Duration = Duration::from_millis(10);
+
+// How long to yield to lower-priority tasks between host polls.
+const POLL_INTERVAL: Duration = Duration::from_micros(200);
+
 const HOST_INIT: tusb_rhport_init_t = tusb_rhport_init_t {
     role: tusb_role_t_TUSB_ROLE_HOST,
     speed: tusb_speed_t_TUSB_SPEED_FULL,
 };
 
+/**
+ * The latched HPRT bits, snapshotted so transitions can be logged.
+ *
+ * `plsts` is deliberately not a field: it samples the raw D+/D- levels, which
+ * toggle with bus traffic, so including it would make every poll look like a
+ * change. It is read separately and reported alongside a real transition.
+ */
+#[derive(PartialEq, Eq, Clone, Copy)]
+struct PortState {
+    connected: bool,
+    enabled: bool,
+    powered: bool,
+    overcurrent: bool,
+    speed: u8,
+}
+
+/// HPRT.PLSTS with both single-ended lines high: not a legal USB signaling state.
+const LINE_STATE_SE1: u8 = 0b11;
+
+/// Decodes HPRT.PLSTS, where bit 0 is the D+ level and bit 1 is D-.
+fn line_state_name(plsts: u8) -> &'static str {
+    match plsts {
+        0b00 => "SE0",
+        0b01 => "J",
+        0b10 => "K",
+        _ => "SE1",
+    }
+}
+
+/// Decodes HPRT.PSPD. Only meaningful while a device is connected.
+fn speed_name(pspd: u8) -> &'static str {
+    match pspd {
+        0 => "HS",
+        1 => "FS",
+        2 => "LS",
+        _ => "?",
+    }
+}
+
 #[embassy_executor::task]
 pub async fn usb_host_task() {
-    let mut stalled_ticks: u32 = 0;
+    /*
+     * Both recovery paths are timed from the instant their condition was first
+     * observed, not from a count of loop iterations -- the iteration rate varies
+     * with optimization settings and with how long tuh_task_ext() runs, so a
+     * counted timeout silently changes length whenever codegen changes.
+     */
+    let mut stalled_since: Option<Instant> = None;
+    let mut port_dead_since: Option<Instant> = None;
     let mut attempts: u8 = 0;
-    let mut port_dead_ticks: u32 = 0;
+    let mut last_port: Option<PortState> = None;
+    let mut se1_reported = false;
 
     loop {
         unsafe {
@@ -54,8 +110,49 @@ pub async fn usb_host_task() {
          * Only hit if something is plugged in, limited retry attempts.
          */
         let hprt = pac::USB_OTG_HS.hprt().read();
-        let port_up = hprt.pcsts() && hprt.pena();
+        let port = PortState {
+            connected: hprt.pcsts(),
+            enabled: hprt.pena(),
+            powered: hprt.ppwr(),
+            overcurrent: hprt.poca(),
+            speed: hprt.pspd(),
+        };
         let mounted = MIDI_MOUNTED.load(Ordering::Relaxed);
+
+        let line_state = hprt.plsts();
+
+        // Report port transitions so a failed attach is distinguishable from no attach
+        if last_port != Some(port) {
+            serial_log(&format!(
+                "port: connected={} enabled={} powered={} overcurrent={} speed={} line={}",
+                port.connected as u8,
+                port.enabled as u8,
+                port.powered as u8,
+                port.overcurrent as u8,
+                speed_name(port.speed),
+                line_state_name(line_state),
+            ));
+
+            if port.overcurrent && !last_port.is_some_and(|previous| previous.overcurrent) {
+                serial_error("USB over-current tripped, port power cut by the core");
+            }
+
+            last_port = Some(port);
+        }
+
+        /*
+         * SE1 means D+ and D- are both high, which USB does not define. A short
+         * between the pair reads this way: the device's 1.5k pullup against both
+         * host pulldowns sits around 2.75V, above the receiver threshold on both
+         * lines. Reported once per attach -- the line is sampled asynchronously
+         * to bus traffic, so a single reading is not worth acting on.
+         */
+        if port.connected && !mounted && line_state == LINE_STATE_SE1 && !se1_reported {
+            se1_reported = true;
+            serial_error("bus in SE1 (D+ and D- both high) -- check for a short across the pair");
+        } else if !port.connected {
+            se1_reported = false;
+        }
 
         /*
          * dwc2 disables the port if there is a babble error, which is not
@@ -65,40 +162,39 @@ pub async fn usb_host_task() {
          * USB port wiring. Just let it ride for now, but something to keep
          * an eye on when moving hardware past the prototype stage.
          */
-        if mounted && hprt.pcsts() && !hprt.pena() {
-            port_dead_ticks += 1;
-            // brief timeout period ~1ms
-            if port_dead_ticks >= 50 {
-                port_dead_ticks = 0;
+        if mounted && port.connected && !port.enabled {
+            if port_dead_since.get_or_insert_with(Instant::now).elapsed() >= PORT_DEAD_TIMEOUT {
+                port_dead_since = None;
                 serial_error("USB port disabled, reinitializing host");
                 reinitialize_host().await;
             }
         } else {
-            port_dead_ticks = 0;
+            port_dead_since = None;
         }
 
-        if !port_up || mounted {
-            stalled_ticks = 0;
+        /*
+         * Armed on pcsts alone. pena is only set once the core has completed a
+         * port reset and speed detection, so keying recovery on it left the
+         * "attached but never enabled" case invisible -- the timer was cleared
+         * on every pass and neither this nor the give-up branch could ever run.
+         */
+        if !port.connected || mounted {
+            stalled_since = None;
             attempts = 0;
-        } else {
-            stalled_ticks += 1;
-            if stalled_ticks >= 15_000
-            // 15k * 200 micro secs = 3s
-            {
-                stalled_ticks = 0;
-                if attempts < MAX_RECOVERY_ATTEMPTS {
-                    attempts += 1;
-                    serial_log("USB enumeration stalled, reinitializing host");
-                    reinitialize_host().await;
-                } else if attempts == MAX_RECOVERY_ATTEMPTS {
-                    attempts += 1;
-                    serial_error("ERROR: device attached but will not enumerate");
-                }
+        } else if stalled_since.get_or_insert_with(Instant::now).elapsed() >= ENUMERATION_TIMEOUT {
+            stalled_since = None;
+            if attempts < MAX_RECOVERY_ATTEMPTS {
+                attempts += 1;
+                serial_log("USB enumeration stalled, reinitializing host");
+                reinitialize_host().await;
+            } else if attempts == MAX_RECOVERY_ATTEMPTS {
+                attempts += 1;
+                serial_error("device attached but will not enumerate");
             }
         }
 
         // Timeout to yield to lower-priority tasks
-        Timer::after_micros(200).await;
+        Timer::after(POLL_INTERVAL).await;
     }
 }
 
@@ -147,7 +243,7 @@ pub fn initialize_midi_host(dn: Peri<'static, PB14>, dp: Peri<'static, PB15>) {
 
     match unsafe { tusb_rhport_init(BOARD_TUH_RHPORT, &HOST_INIT) } {
         true => serial_log("USB MIDI Host initialized"),
-        false => serial_error("ERROR: tusb_rhport_init failed. Unable to set up MIDI Host"),
+        false => serial_error("tusb_rhport_init failed. Unable to set up MIDI Host"),
     }
 }
 

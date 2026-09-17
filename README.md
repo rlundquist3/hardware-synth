@@ -48,3 +48,15 @@ Simple serial logging over UART on board pin 14 (`USART1Tx`), e.g. using a Raspb
 - `ls /dev/tty.*`
   - figure out which one your device is
 - `screen /dev/tty.{your-device} 115200` in a separate terminal
+
+### Structure
+
+- `/hardware-synth-interface` contains the code for the firmware binary:
+  - config
+  - I/O
+  - embassy executors and tasks
+  - depends on [this Rust TinyUSB wrapper](https://github.com/rlundquist3/rust-tinyusb-host) for MIDI
+- `/synth-core` contains the DSP logic:
+  - synth engines
+  - voice management
+  - effects/filters

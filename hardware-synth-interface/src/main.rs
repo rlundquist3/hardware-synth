@@ -4,11 +4,11 @@
 mod allocator;
 mod audio;
 mod display;
-mod logger;
 mod midi;
 mod panic;
 
 extern crate alloc;
+use alloc::format;
 use core::cell::RefCell;
 use daisy_embassy::{
     default_rcc,
@@ -29,13 +29,13 @@ use static_cell::StaticCell;
 
 use crate::{
     audio::audio_handler,
-    logger::{log_handler, serial_log},
     midi::{BOARD_TUH_RHPORT, initialize_midi_host, usb_host_task},
 };
 use crate::{
     display::{DISPLAY, DisplayContent, display_handler},
     midi::tasks::midi_buffer_handler,
 };
+use logger::{log_handler, serial_log};
 use rust_tinyusb_host::tusb_int_handler;
 use synth_core::engines::fm::FMSynth;
 
@@ -147,5 +147,11 @@ async fn main(low_priority_spawner: Spawner) {
     low_priority_spawner.spawn(display_handler(display).unwrap());
 
     serial_log("Display Initialized");
+
+    DISPLAY
+        .send(DisplayContent {
+            text: format!("OH! Hi Cindy!"),
+        })
+        .await;
     // End display setup
 }

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 micromath = "2.1.0"
+logger = { path = "../logger" }
 
 [dev-dependencies]
 approx = "0.5.1"

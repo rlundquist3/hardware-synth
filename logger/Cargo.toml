@@ -1,0 +1,25 @@
+[package]
+name = "logger"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+daisy-embassy = { version = "0.3.0", features = ["seed3"] }
+embassy-executor = { version = "0.10.0", features = [
+    "platform-cortex-m",
+    "executor-thread",
+    "executor-interrupt",
+    "defmt",
+] }
+embassy-stm32 = { version = "0.6.0", features = [
+    "defmt",
+    "stm32h750ib",
+    "time-driver-tim5",
+    "exti",
+    "memory-x",
+    "unstable-pac",
+    "chrono",
+] }
+embassy-sync = { version = "0.8.0", features = ["defmt"] }
+heapless = "0.9.3"

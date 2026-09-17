@@ -39,6 +39,7 @@ embassy-time = { version = "0.5.1", features = [
 ] }
 embedded-graphics = "0.8.2"
 heapless = "0.9.3"
+logger = { path = "../logger" }
 rust-tinyusb-host = { git = "https://github.com/rlundquist3/rust-tinyusb-host.git", rev = "2e15a2f" }
 ssd1306 = "0.10.0"
 static_cell = "2.1.1"

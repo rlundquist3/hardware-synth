@@ -39,16 +39,29 @@ pub fn get_linear_bent_freq(midi_note: usize, midi_bend: u16, range_semitones: u
         NO_BEND => base_freq,
         _ => {
             let (min, max, bend) = match midi_bend < NO_BEND {
-                true => (
-                    MIDI_NOTE_FREQS[midi_note - range_semitones],
-                    base_freq,
-                    midi_bend as f32 / NO_BEND as f32,
-                ),
-                false => (
-                    base_freq,
-                    MIDI_NOTE_FREQS[midi_note + range_semitones],
-                    (midi_bend - NO_BEND) as f32 / (MAX_BEND_UP - NO_BEND) as f32,
-                ),
+                true => {
+                    let min_index = match midi_note > range_semitones {
+                        true => midi_note - range_semitones,
+                        false => 0,
+                    };
+                    (
+                        MIDI_NOTE_FREQS[min_index],
+                        base_freq,
+                        midi_bend as f32 / NO_BEND as f32,
+                    )
+                }
+                false => {
+                    let max_index = match midi_note < MIDI_NOTE_FREQS.len() - (range_semitones + 1)
+                    {
+                        true => midi_note + range_semitones,
+                        false => MIDI_NOTE_FREQS.len() - 1,
+                    };
+                    (
+                        base_freq,
+                        MIDI_NOTE_FREQS[max_index],
+                        (midi_bend - NO_BEND) as f32 / (MAX_BEND_UP - NO_BEND) as f32,
+                    )
+                }
             };
 
             min + bend * (max - min)
