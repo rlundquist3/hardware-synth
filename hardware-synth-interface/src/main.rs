@@ -3,6 +3,7 @@
 
 mod allocator;
 mod audio;
+mod controls;
 mod display;
 mod midi;
 mod panic;
@@ -12,12 +13,17 @@ use alloc::format;
 use core::cell::RefCell;
 use daisy_embassy::{
     default_rcc,
-    hal::{bind_interrupts, peripherals},
+    hal::{
+        self, bind_interrupts,
+        exti::{self, ExtiInput},
+        gpio::Pull,
+        interrupt, peripherals,
+    },
     new_daisy_board,
 };
 use defmt_serial as _;
 use embassy_executor::{InterruptExecutor, Spawner};
-use embassy_stm32::interrupt;
+// TODO: clean up these imports - should be able to come from daisy_embassy::hal
 use embassy_stm32::{
     i2c::{Config, I2c},
     interrupt::{InterruptExt, Priority},
@@ -29,6 +35,7 @@ use static_cell::StaticCell;
 
 use crate::{
     audio::audio_handler,
+    controls::encoders::{encoder_0_click_handler, encoder_0_handler, encoder_0_receiver_test},
     midi::{BOARD_TUH_RHPORT, initialize_midi_host, usb_host_task},
 };
 use crate::{
@@ -39,9 +46,10 @@ use logger::{log_handler, serial_log};
 use rust_tinyusb_host::tusb_int_handler;
 use synth_core::engines::fm::FMSynth;
 
-// Bind interrupt for USART1, used for serial logging
 bind_interrupts!(struct Irqs {
     USART1 => usart::InterruptHandler<peripherals::USART1>;
+    EXTI15_10 => exti::InterruptHandler<interrupt::typelevel::EXTI15_10>;
+    EXTI9_5 => hal::exti::InterruptHandler<interrupt::typelevel::EXTI9_5>;
 });
 
 static AUDIO_EXECUTOR: InterruptExecutor = InterruptExecutor::new();
@@ -123,6 +131,15 @@ async fn main(low_priority_spawner: Spawner) {
     let midi_executor = MIDI_EXECUTOR.start(interrupt::UART4);
     midi_executor.spawn(usb_host_task().unwrap());
     // End MIDI setup
+
+    // Start control setup
+    let clk_0 = ExtiInput::new(board.pins.d1, peripherals.EXTI11, Pull::Up, Irqs);
+    let dt_0 = ExtiInput::new(board.pins.d2, peripherals.EXTI10, Pull::Up, Irqs);
+    let sw_0 = ExtiInput::new(board.pins.d3, peripherals.EXTI9, Pull::Up, Irqs);
+    low_priority_spawner.spawn(encoder_0_handler(clk_0, dt_0).unwrap());
+    low_priority_spawner.spawn(encoder_0_click_handler(sw_0).unwrap());
+    low_priority_spawner.spawn(encoder_0_receiver_test().unwrap());
+    // End control setup
 
     // Start display setup
     let i2c = I2c::new_blocking(

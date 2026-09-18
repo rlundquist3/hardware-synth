@@ -62,7 +62,6 @@ pub async fn usb_host_task() {
     let mut stalled_since: Option<Instant> = None;
     let mut port_dead_since: Option<Instant> = None;
     let mut attempts: u8 = 0;
-    let mut last_port: Option<PortState> = None;
     let mut se1_reported = false;
 
     loop {
