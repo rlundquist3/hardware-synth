@@ -4,6 +4,8 @@ use core::f32::consts::PI;
 use core::sync::atomic::Ordering;
 
 use crate::effects::gain::Gain;
+use crate::parameter::ParameterChange::{self, Decrement, Increment};
+use crate::parameter::UserParameters;
 use crate::voices::Voices;
 use crate::{
     amp_envelope::AmpEnvelope, effects::Effect, engines::fm::fm_synth_voice::FMSynthVoice,
@@ -103,73 +105,71 @@ impl Iterator for Voices<FMSynthVoice> {
     }
 }
 
-// impl UserParameters for FMSynth {
-//     fn get_parameters(&self) -> Vec<Parameter> {
-//         self.parameters
-//             .iter()
-//             .cloned()
-//             .chain(self.envelope.get_parameters())
-//             .collect()
-//     }
+impl UserParameters for FMSynth {
+    fn get_parameters(&self) -> Vec<Parameter> {
+        self.parameters
+            .iter()
+            .cloned()
+            .chain(self.envelope.get_parameters())
+            .collect()
+    }
 
-//     fn update_parameter(&mut self, index: usize, change: ParameterChange) -> Option<Parameter> {
-//         let synth_param_count = self.parameters.len();
+    fn update_parameter(&mut self, index: usize, change: ParameterChange) -> Option<Parameter> {
+        let synth_param_count = self.parameters.len();
 
-//         if index >= synth_param_count {
-//             return self
-//                 .envelope
-//                 .update_parameter(index - synth_param_count, change);
-//         }
+        if index >= synth_param_count {
+            return self
+                .envelope
+                .update_parameter(index - synth_param_count, change);
+        }
 
-//         let param = self.parameters.get(index)?;
-//         let delta = match change {
-//             Increment => param.delta,
-//             Decrement => -param.delta,
-//         };
-//         let updated_value = (param.get_value() + delta).clamp(param.range.0, param.range.1);
+        let param: &mut Parameter = self.parameters.get_mut(index)?;
+        let delta = match change {
+            Increment => param.delta,
+            Decrement => -param.delta,
+        };
+        let updated_value = (param.get_value() + delta).clamp(param.range.0, param.range.1);
 
-//         param.set_value(updated_value);
+        param.set_value(updated_value);
 
-//         match index {
-//             0 => {
-//                 self.voices.voices.iter().for_each(|voice| {
-//                     let mut v = voice.lock().unwrap();
-//                     let existing = v.get_freq_ratio();
-//                     v.set_freq_ratio(FreqRatio(updated_value, existing.1))
-//                 });
-//                 Some(param.clone())
-//             }
-//             1 => {
-//                 self.voices.voices.iter().for_each(|voice| {
-//                     let mut v = voice.lock().unwrap();
-//                     let existing = v.get_freq_ratio();
-//                     v.set_freq_ratio(FreqRatio(existing.0, updated_value))
-//                 });
-//                 Some(param.clone())
-//             }
-//             2 => {
-//                 let mod_index = MOD_INDEX_OPTIONS[updated_value as usize];
-//                 self.voices
-//                     .voices
-//                     .iter()
-//                     .for_each(|voice| voice.lock().unwrap().set_mod_index(mod_index));
-//                 Some(param.clone())
-//             }
-//             3 => {
-//                 self.voices
-//                     .voices
-//                     .iter()
-//                     .for_each(|voice| voice.lock().unwrap().set_lfo_amp(updated_value));
-//                 Some(param.clone())
-//             }
-//             4 => {
-//                 self.voices
-//                     .voices
-//                     .iter()
-//                     .for_each(|voice| voice.lock().unwrap().set_lfo_freq(updated_value));
-//                 Some(param.clone())
-//             }
-//             _ => None,
-//         }
-//     }
-// }
+        match index {
+            0 => {
+                self.voices.voices.iter_mut().for_each(|voice| {
+                    let existing = voice.get_freq_ratio();
+                    voice.set_freq_ratio(FreqRatio(updated_value, existing.1))
+                });
+                Some(param.clone())
+            }
+            1 => {
+                self.voices.voices.iter_mut().for_each(|voice| {
+                    let existing = voice.get_freq_ratio();
+                    voice.set_freq_ratio(FreqRatio(existing.0, updated_value))
+                });
+                Some(param.clone())
+            }
+            2 => {
+                let mod_index = MOD_INDEX_OPTIONS[updated_value as usize];
+                self.voices
+                    .voices
+                    .iter_mut()
+                    .for_each(|voice| voice.set_mod_index(mod_index));
+                Some(param.clone())
+            }
+            3 => {
+                self.voices
+                    .voices
+                    .iter_mut()
+                    .for_each(|voice| voice.set_lfo_amp(updated_value));
+                Some(param.clone())
+            }
+            4 => {
+                self.voices
+                    .voices
+                    .iter_mut()
+                    .for_each(|voice| voice.set_lfo_freq(updated_value));
+                Some(param.clone())
+            }
+            _ => None,
+        }
+    }
+}

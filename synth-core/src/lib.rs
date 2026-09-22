@@ -1,11 +1,11 @@
 #![no_std]
 
-mod amp_envelope;
-mod effects;
+pub mod amp_envelope;
+pub mod effects;
 pub mod engines;
 pub mod midi;
-mod oscillator;
-mod parameter;
+pub mod oscillator;
+pub mod parameter;
 pub mod utils;
 pub mod voices;
 
