@@ -120,7 +120,32 @@ impl UserParameters for AmpEnvelope {
             Increment => param.delta,
             Decrement => -param.delta,
         };
-        param.set_value((param.get_value() + delta).clamp(param.range.0, param.range.1));
+        let new_value = (param.get_value() + delta).clamp(param.range.0, param.range.1);
+        param.set_value(new_value);
+
+        match index {
+            0 => {
+                let attack_samples = (new_value * SAMPLE_RATE as f32) as u32;
+                self.attack_samples = attack_samples;
+                self.attack_step = 1.0 / attack_samples as f32;
+            }
+            1 => {
+                let decay_samples = (new_value * SAMPLE_RATE as f32) as u32;
+                self.decay_samples = decay_samples;
+                self.decay_step = (1.0 - self.sustain) / decay_samples as f32;
+            }
+            2 => {
+                self.sustain = new_value;
+                self.decay_step = (1.0 - new_value) / self.decay_samples as f32;
+                self.release_step = new_value / self.release_samples as f32;
+            }
+            3 => {
+                let release_samples = (new_value * SAMPLE_RATE as f32) as u32;
+                self.release_samples = release_samples;
+                self.release_step = self.sustain / release_samples as f32;
+            }
+            _ => {}
+        }
 
         Some(param.clone())
     }

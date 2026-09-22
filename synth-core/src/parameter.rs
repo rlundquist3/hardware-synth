@@ -39,6 +39,7 @@ impl Parameter {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum ParameterChange {
     Increment,
     Decrement,

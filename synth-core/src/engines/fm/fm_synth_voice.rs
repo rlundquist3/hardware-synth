@@ -20,7 +20,7 @@ pub struct FMSynthVoice {
     mod_osc: Oscillator,
     lfo_amp: f32,
     lfo: Oscillator,
-    envelope: AmpEnvelope,
+    pub envelope: AmpEnvelope,
 
     pub on: Arc<AtomicBool>,
 }

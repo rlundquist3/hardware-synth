@@ -118,6 +118,11 @@ impl UserParameters for FMSynth {
         let synth_param_count = self.parameters.len();
 
         if index >= synth_param_count {
+            self.voices.voices.iter_mut().for_each(|voice| {
+                voice
+                    .envelope
+                    .update_parameter(index - synth_param_count, change.clone());
+            });
             return self
                 .envelope
                 .update_parameter(index - synth_param_count, change);
