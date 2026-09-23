@@ -68,7 +68,7 @@ pub async fn encoder_handler(
                 }
             } {
                 if start.elapsed() >= DELAY {
-                    serial_log(&format!("Encoder {:?} {:?}", control_event, change));
+                    // serial_log(&format!("Encoder {:?} {:?}", control_event, change));
                     CONTROL_BUFFER.send(control_event).await;
                     change = 0;
                     start = Instant::now();
@@ -87,7 +87,7 @@ pub async fn encoder_click_handler(encoder_index: usize, mut sw: ExtiInput<'stat
     loop {
         sw.wait_for_low().await;
 
-        serial_log(&format!("Encoder {:?} clicked", encoder_index));
+        // serial_log(&format!("Encoder {:?} clicked", encoder_index));
 
         if let Some(control_event) = match encoder_index {
             1 => Some(ControlEvent::Encoder1Click),
