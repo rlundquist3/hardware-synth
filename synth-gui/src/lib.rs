@@ -2,5 +2,7 @@
 
 extern crate alloc;
 
-pub mod button;
 pub mod engines;
+pub mod envelope;
+pub mod footer;
+pub mod lfo;

@@ -14,7 +14,7 @@ use embedded_layout::{
 use heapless::String;
 use synth_core::{engines::fm::MOD_INDEX_RENDER, parameter::Parameter};
 
-use crate::button::Button;
+use crate::footer::FooterMenu;
 
 pub struct EngineMainLayout {
     c: String<8>,
@@ -43,9 +43,9 @@ impl Drawable for EngineMainLayout {
     type Color = BinaryColor;
     type Output = ();
 
-    fn draw<D>(&self, target: &mut D) -> Result<(), D::Error>
+    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
     where
-        D: DrawTarget<Color = BinaryColor>,
+        D: DrawTarget<Color = Self::Color>,
     {
         let ratio_text_style = MonoTextStyle::new(&FONT_9X18_BOLD, BinaryColor::On);
 
@@ -55,11 +55,6 @@ impl Drawable for EngineMainLayout {
             .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 2));
         let i_text = Text::new(self.i, Point::zero(), ratio_text_style);
 
-        let lfo_button = Button::new("lfo").format();
-        let envelope_button = Button::new("env").format();
-        let filters_button = Button::new("filt").format();
-        let effects_button = Button::new("fx").format();
-
         let ratio = LinearLayout::vertical(Chain::new(c_text).append(ratio_line).append(m_text))
             .with_alignment(horizontal::Center)
             .arrange();
@@ -67,18 +62,11 @@ impl Drawable for EngineMainLayout {
             .with_alignment(vertical::Center)
             .with_spacing(spacing::DistributeFill(80))
             .arrange();
-        let buttons = LinearLayout::horizontal(
-            Chain::new(lfo_button)
-                .append(envelope_button)
-                .append(filters_button)
-                .append(effects_button),
-        )
-        .with_spacing(spacing::DistributeFill(120))
-        .arrange();
+        let footer = FooterMenu::new(["main", "lfo", "env", "filt", "fx"], 0);
 
-        LinearLayout::vertical(Chain::new(engine_params).append(buttons))
+        LinearLayout::vertical(Chain::new(engine_params).append(footer))
             .with_alignment(horizontal::Center)
-            .with_spacing(spacing::DistributeFill(56))
+            .with_spacing(spacing::DistributeFill(60))
             .arrange()
             .align_to(&self.display_area, horizontal::Center, vertical::Center)
             .draw(target)

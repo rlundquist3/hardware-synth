@@ -65,6 +65,10 @@ impl FMSynth {
             voice.set_pitch_bend(bend);
         });
     }
+
+    pub fn get_envelope_parameters(&self) -> Vec<Parameter> {
+        self.envelope.get_parameters()
+    }
 }
 
 impl Iterator for FMSynth {
@@ -107,11 +111,14 @@ impl Iterator for Voices<FMSynthVoice> {
 
 impl UserParameters for FMSynth {
     fn get_parameters(&self) -> Vec<Parameter> {
-        self.parameters
-            .iter()
-            .cloned()
-            .chain(self.envelope.get_parameters())
-            .collect()
+        self.parameters.clone()
+
+        // previously chained on envelope params, but probably not needed with new GUI
+        // self.parameters
+        //     .iter()
+        //     .cloned()
+        //     .chain(self.envelope.get_parameters())
+        //     .collect()
     }
 
     fn update_parameter(&mut self, index: usize, change: ParameterChange) -> Option<Parameter> {
