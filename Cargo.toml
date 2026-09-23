@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["hardware-synth-interface", "logger", "synth-core"]
+members = ["hardware-synth-interface", "logger", "synth-core", "synth-gui"]
 
 [profile.release]
 panic = "abort"

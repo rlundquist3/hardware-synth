@@ -44,3 +44,4 @@ rust-tinyusb-host = { git = "https://github.com/rlundquist3/rust-tinyusb-host.gi
 ssd1306 = "0.10.0"
 static_cell = "2.1.1"
 synth-core = { path = "../synth-core" }
+synth-gui = { path = "../synth-gui" }
