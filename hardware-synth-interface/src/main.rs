@@ -35,11 +35,14 @@ use static_cell::StaticCell;
 
 use crate::{
     audio::audio_handler,
-    controls::encoders::{encoder_0_click_handler, encoder_0_handler, encoder_0_receiver_test},
-    midi::{BOARD_TUH_RHPORT, initialize_midi_host, usb_host_task},
+    controls::{
+        control_handler,
+        encoders::{encoder_click_handler, encoder_handler},
+    },
+    midi::{BOARD_TUH_RHPORT, initialize_midi_host, tasks::midi_heartbeat, usb_host_task},
 };
 use crate::{
-    display::{DISPLAY, DisplayContent, display_handler},
+    display::{DISPLAY_BUFFER, DisplayContent, display_handler},
     midi::tasks::midi_buffer_handler,
 };
 use logger::{log_handler, serial_log};
@@ -119,6 +122,9 @@ async fn main(low_priority_spawner: Spawner) {
     audio_executor.spawn(audio_handler(audio_interface, engine).unwrap());
     audio_executor.spawn(midi_buffer_handler(engine).unwrap());
 
+    // Comment this out to stop middle C heartbeat
+    audio_executor.spawn(midi_heartbeat(engine).unwrap());
+
     serial_log("Audio Initialized");
     // End audio setup
 
@@ -136,9 +142,8 @@ async fn main(low_priority_spawner: Spawner) {
     let clk_0 = ExtiInput::new(board.pins.d1, peripherals.EXTI11, Pull::Up, Irqs);
     let dt_0 = ExtiInput::new(board.pins.d2, peripherals.EXTI10, Pull::Up, Irqs);
     let sw_0 = ExtiInput::new(board.pins.d3, peripherals.EXTI9, Pull::Up, Irqs);
-    low_priority_spawner.spawn(encoder_0_handler(clk_0, dt_0).unwrap());
-    low_priority_spawner.spawn(encoder_0_click_handler(sw_0).unwrap());
-    low_priority_spawner.spawn(encoder_0_receiver_test().unwrap());
+    low_priority_spawner.spawn(encoder_handler(1, clk_0, dt_0).unwrap());
+    low_priority_spawner.spawn(encoder_click_handler(1, sw_0).unwrap());
     // End control setup
 
     // Start display setup
@@ -161,14 +166,9 @@ async fn main(low_priority_spawner: Spawner) {
     .into_buffered_graphics_mode();
     display.init().unwrap();
 
-    low_priority_spawner.spawn(display_handler(display).unwrap());
-
+    low_priority_spawner.spawn(display_handler(display, engine).unwrap());
+    low_priority_spawner.spawn(control_handler(engine).unwrap());
+    DISPLAY_BUFFER.send(1).await;
     serial_log("Display Initialized");
-
-    DISPLAY
-        .send(DisplayContent {
-            text: format!("OH! Hi Cindy!"),
-        })
-        .await;
     // End display setup
 }

@@ -1,6 +1,7 @@
 use core::{cell::RefCell, sync::atomic::Ordering};
 
 use embassy_sync::blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex};
+use embassy_time::Timer;
 use synth_core::{
     engines::fm::FMSynth,
     midi::{MIDI_NOTE_FREQS, MidiMessage, get_pitch_bend_value},
@@ -27,6 +28,19 @@ pub async fn midi_buffer_handler(
             224 => handle_pitch_bend(engine, get_pitch_bend_value(message)).await,
             _ => {}
         };
+    }
+}
+
+/// Pulse middle C to test audio without MIDI controller
+#[embassy_executor::task]
+pub async fn midi_heartbeat(
+    engine: &'static BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
+) {
+    loop {
+        handle_note_on(engine, MidiMessage(144, 60, 100)).await;
+        Timer::after_millis(500).await;
+        handle_note_off(engine, MidiMessage(128, 60, 0)).await;
+        Timer::after_millis(500).await;
     }
 }
 

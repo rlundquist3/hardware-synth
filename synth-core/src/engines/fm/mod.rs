@@ -19,8 +19,8 @@ const VOICE_COUNT: usize = 5;
 #[derive(Clone, Copy, Debug)]
 pub struct FreqRatio(pub f32, pub f32);
 
-const MOD_INDEX_OPTIONS: &[f32] = &[1.0, 2.0, PI, 4.0, 5.0, 2.0 * PI];
-const MOD_INDEX_RENDER: &[&str] = &["1", "2", "π", "4", "5", "2π"];
+pub const MOD_INDEX_OPTIONS: &[f32] = &[1.0, 2.0, PI, 4.0, 5.0, 2.0 * PI];
+pub const MOD_INDEX_RENDER: &[&str] = &["1", "2", "pi", "4", "5", "2 pi"];
 
 #[derive(Debug)]
 pub struct FMSynth {
