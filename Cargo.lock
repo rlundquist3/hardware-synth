@@ -1321,6 +1321,7 @@ dependencies = [
  "embedded-graphics",
  "embedded-layout",
  "heapless",
+ "micromath",
  "synth-core",
 ]
 

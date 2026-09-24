@@ -7,4 +7,5 @@ edition = "2024"
 embedded-graphics = "0.8.2"
 embedded-layout = "0.4.2"
 heapless = "0.9.3"
+micromath = "2.1.0"
 synth-core = { path = "../synth-core" }

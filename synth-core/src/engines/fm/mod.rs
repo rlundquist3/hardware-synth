@@ -52,7 +52,7 @@ impl FMSynth {
                     |v| format!("{}", MOD_INDEX_RENDER[v as usize]),
                 ),
                 Parameter::new("LFO Amp", 0.0, 0.025, (0.0, 5.0), |v| format!("{:.3}", v)),
-                Parameter::new("LFO Freq", 0.0, 1.0, (0.0, 8.0), |v| format!("{:.0}Hz", v)),
+                Parameter::new("LFO Freq", 0.0, 0.25, (0.0, 8.0), |v| format!("{:.2}Hz", v)),
             ],
             headroom_gain: Gain::new(-16.0),
             envelope,
