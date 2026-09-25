@@ -15,6 +15,7 @@ use ssd1306::{Ssd1306, prelude::*};
 use synth_core::engines::fm::FMSynth;
 
 use crate::{
+    SharedChain,
     controls::{
         MODE,
         Mode::{
@@ -43,10 +44,7 @@ pub static DISPLAY_BUFFER: Channel<CriticalSectionRawMutex, u32, 16> = Channel::
 const TEXT_STYLE: MonoTextStyle<'_, BinaryColor> = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
 #[embassy_executor::task]
-pub async fn display_handler(
-    mut display: Display,
-    engine: &'static BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
-) {
+pub async fn display_handler(mut display: Display, chain: &'static SharedChain) {
     let mut mode_rx = MODE.receiver().unwrap();
 
     loop {
@@ -55,7 +53,7 @@ pub async fn display_handler(
 
         let mode = mode_rx.get().await;
         match mode {
-            EngineMain => render_engine_main(&mut display, engine).await.unwrap(),
+            EngineMain => render_engine_main(&mut display, chain).await.unwrap(),
             EngineEnvelope => {}
             EngineLFO => {}
             FiltersMain => {}

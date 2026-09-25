@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+heapless = "0.9.3"
 micromath = "2.1.0"
 
 [dev-dependencies]

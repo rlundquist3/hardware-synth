@@ -1,6 +1,7 @@
 #![no_std]
 
 pub mod amp_envelope;
+pub mod chain;
 pub mod effects;
 pub mod engines;
 pub mod midi;

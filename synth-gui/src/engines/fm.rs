@@ -62,7 +62,7 @@ impl Drawable for EngineMainLayout {
             .with_alignment(vertical::Center)
             .with_spacing(spacing::DistributeFill(80))
             .arrange();
-        let footer = FooterMenu::new(["main", "lfo", "env", "filt", "fx"], 0);
+        let footer = FooterMenu::new(["main", "lfo", "env", "fltr", "fx"], 0);
 
         LinearLayout::vertical(Chain::new(engine_params).append(footer))
             .with_alignment(horizontal::Center)

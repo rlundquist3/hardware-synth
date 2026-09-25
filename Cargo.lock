@@ -1311,6 +1311,7 @@ name = "synth-core"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "heapless",
  "micromath",
 ]
 

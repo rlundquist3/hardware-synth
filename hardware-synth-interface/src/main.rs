@@ -9,7 +9,7 @@ mod midi;
 mod panic;
 
 extern crate alloc;
-use alloc::format;
+use alloc::{boxed::Box, format};
 use core::cell::RefCell;
 use daisy_embassy::{
     default_rcc,
@@ -47,7 +47,7 @@ use crate::{
 };
 use logger::{log_handler, serial_log};
 use rust_tinyusb_host::tusb_int_handler;
-use synth_core::engines::fm::FMSynth;
+use synth_core::{chain::Chain, engines::fm::FMSynth};
 
 bind_interrupts!(struct Irqs {
     USART1 => usart::InterruptHandler<peripherals::USART1>;
@@ -82,7 +82,9 @@ fn OTG_HS() {
     }
 }
 
-pub static ENGINE: StaticCell<BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>> =
+pub type SharedChain = BlockingMutex<CriticalSectionRawMutex, RefCell<Chain>>;
+
+pub static CHAIN: StaticCell<BlockingMutex<CriticalSectionRawMutex, RefCell<Chain>>> =
     StaticCell::new();
 
 /**
@@ -115,15 +117,17 @@ async fn main(low_priority_spawner: Spawner) {
         .prepare_interface(Default::default())
         .await;
     let audio_interface = (audio_interface.start_interface().await).unwrap();
-    let engine = ENGINE.init(BlockingMutex::new(RefCell::new(FMSynth::new())));
+    let chain = CHAIN.init(BlockingMutex::new(RefCell::new(Chain::new(Box::new(
+        FMSynth::new(),
+    )))));
 
     interrupt::USART3.set_priority(Priority::P0);
     let audio_executor = AUDIO_EXECUTOR.start(interrupt::USART3);
-    audio_executor.spawn(audio_handler(audio_interface, engine).unwrap());
-    audio_executor.spawn(midi_buffer_handler(engine).unwrap());
+    audio_executor.spawn(audio_handler(audio_interface, chain).unwrap());
+    audio_executor.spawn(midi_buffer_handler(chain).unwrap());
 
     // Comment this out to stop middle C heartbeat
-    audio_executor.spawn(midi_heartbeat(engine).unwrap());
+    audio_executor.spawn(midi_heartbeat(chain).unwrap());
 
     serial_log("Audio Initialized");
     // End audio setup
@@ -166,8 +170,8 @@ async fn main(low_priority_spawner: Spawner) {
     .into_buffered_graphics_mode();
     display.init().unwrap();
 
-    low_priority_spawner.spawn(display_handler(display, engine).unwrap());
-    low_priority_spawner.spawn(control_handler(engine).unwrap());
+    low_priority_spawner.spawn(display_handler(display, chain).unwrap());
+    low_priority_spawner.spawn(control_handler(chain).unwrap());
     DISPLAY_BUFFER.send(1).await;
     serial_log("Display Initialized");
     // End display setup

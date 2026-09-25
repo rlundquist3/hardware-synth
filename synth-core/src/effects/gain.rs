@@ -1,5 +1,5 @@
 use alloc::vec;
-use alloc::{format, string::String, vec::Vec};
+use alloc::{format, vec::Vec};
 
 use crate::{
     effects::Effect,
@@ -31,14 +31,6 @@ impl Gain {
 }
 
 impl Effect for Gain {
-    // fn clone_box(&self) -> Box<dyn Effect> {
-    //     Box::new(Gain {
-    //         gain_db: self.gain_db,
-    //         gain_linear: self.gain_linear,
-    //         parameters: self.parameters.clone(),
-    //     })
-    // }
-
     fn process(&mut self, sample: f32) -> f32 {
         let current_db = self.parameters[0].get_value();
         if current_db != self.gain_db {
@@ -48,8 +40,8 @@ impl Effect for Gain {
         self.gain_linear * sample
     }
 
-    fn get_name(&self) -> String {
-        String::from("Gain")
+    fn get_name(&self) -> &str {
+        "Gain"
     }
 }
 

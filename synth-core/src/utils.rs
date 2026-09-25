@@ -1,5 +1,8 @@
 use micromath::F32Ext;
 
+pub const LFO_AMP_RANGE: (f32, f32) = (0.0, 1.0);
+pub const LFO_FREQ_RANGE: (f32, f32) = (0.0, 8.0);
+
 pub fn db_to_linear_gain(db: f32) -> f32 {
     10.0_f32.powf(db / 20.0)
 }

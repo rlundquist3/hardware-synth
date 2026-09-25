@@ -1,13 +1,11 @@
+pub mod filters;
 pub mod gain;
-
-use alloc::string::String;
 
 use crate::parameter::UserParameters;
 
-pub trait Effect: UserParameters {
+pub trait Effect: UserParameters + Send {
     fn process(&mut self, sample: f32) -> f32;
-    // fn clone_box(&self) -> Box<dyn Effect>;
-    fn get_name(&self) -> String;
+    fn get_name(&self) -> &str;
 }
 
 pub trait EffectComponent {

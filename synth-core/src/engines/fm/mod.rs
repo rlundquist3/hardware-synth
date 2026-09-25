@@ -4,9 +4,12 @@ use core::f32::consts::PI;
 use core::sync::atomic::Ordering;
 
 use crate::effects::gain::Gain;
+use crate::engines::Engine;
+use crate::midi::MIDI_NOTE_FREQS;
 use crate::parameter::ParameterChange::{self, Decrement, Increment};
 use crate::parameter::UserParameters;
-use crate::voices::Voices;
+use crate::utils::{LFO_AMP_RANGE, LFO_FREQ_RANGE};
+use crate::voices::{Voice, Voices};
 use crate::{
     amp_envelope::AmpEnvelope, effects::Effect, engines::fm::fm_synth_voice::FMSynthVoice,
     parameter::Parameter,
@@ -28,7 +31,6 @@ pub struct FMSynth {
     headroom_gain: Gain,
     envelope: AmpEnvelope,
     parameters: Vec<Parameter>,
-    // pub effects: Vec<Box<dyn Effect>>,
 }
 
 impl FMSynth {
@@ -36,8 +38,6 @@ impl FMSynth {
         let envelope = AmpEnvelope::new(0.3, 0.2, 0.8, 0.3);
         let signal_source = FMSynthVoice::new(envelope.clone());
         let voices = Voices::new((0..VOICE_COUNT).map(|_| signal_source.clone()).collect());
-
-        // let mut effects: Vec<Box<dyn Effect>> = Vec::new();
 
         FMSynth {
             voices,
@@ -51,23 +51,44 @@ impl FMSynth {
                     (0.0, (MOD_INDEX_OPTIONS.len() - 1) as f32),
                     |v| format!("{}", MOD_INDEX_RENDER[v as usize]),
                 ),
-                Parameter::new("LFO Amp", 0.0, 0.025, (0.0, 5.0), |v| format!("{:.3}", v)),
-                Parameter::new("LFO Freq", 0.0, 0.25, (0.0, 8.0), |v| format!("{:.2}Hz", v)),
+                Parameter::new("LFO Amp", 0.0, 0.025, LFO_AMP_RANGE, |v| {
+                    format!("{:.3}", v)
+                }),
+                Parameter::new("LFO Freq", 0.0, 0.25, LFO_FREQ_RANGE, |v| {
+                    format!("{:.2}Hz", v)
+                }),
             ],
             headroom_gain: Gain::new(-16.0),
             envelope,
-            // effects,
+        }
+    }
+}
+
+impl Engine for FMSynth {
+    fn note_on(&mut self, note: u8) {
+        let voice = self.voices.voice_on(note);
+        voice.set_freq(MIDI_NOTE_FREQS[note as usize], note as usize);
+        voice.on.store(true, Ordering::Relaxed);
+    }
+
+    fn note_off(&mut self, note: u8) {
+        if let Some(voice) = self.voices.voice_off(note) {
+            voice.on.store(false, Ordering::Relaxed);
         }
     }
 
-    pub fn set_pitch_bend(&mut self, bend: u16) {
+    fn set_pitch_bend(&mut self, bend: u16) {
         self.voices.voices.iter_mut().for_each(|voice| {
             voice.set_pitch_bend(bend);
         });
     }
 
-    pub fn get_envelope_parameters(&self) -> Vec<Parameter> {
+    fn get_envelope_parameters(&self) -> Vec<Parameter> {
         self.envelope.get_parameters()
+    }
+
+    fn get_name(&self) -> &str {
+        "FM"
     }
 }
 
@@ -76,14 +97,7 @@ impl Iterator for FMSynth {
 
     fn next(&mut self) -> Option<f32> {
         let raw = self.voices.next()?;
-
-        let headroom_corrected = self.headroom_gain.process(raw);
-        let sample =
-            headroom_corrected /* self
-                .effects
-                .iter_mut()
-                .fold(headroom_corrected, |sample, effect| effect.process(sample))*/
-                .clamp(-1.0, 1.0);
+        let sample = self.headroom_gain.process(raw).clamp(-1.0, 1.0);
 
         Some(sample)
     }
@@ -112,13 +126,6 @@ impl Iterator for Voices<FMSynthVoice> {
 impl UserParameters for FMSynth {
     fn get_parameters(&self) -> Vec<Parameter> {
         self.parameters.clone()
-
-        // previously chained on envelope params, but probably not needed with new GUI
-        // self.parameters
-        //     .iter()
-        //     .cloned()
-        //     .chain(self.envelope.get_parameters())
-        //     .collect()
     }
 
     fn update_parameter(&mut self, index: usize, change: ParameterChange) -> Option<Parameter> {

@@ -8,6 +8,7 @@ use embassy_sync::{
 };
 use logger::serial_log;
 use synth_core::{
+    chain::Chain,
     engines::fm::FMSynth,
     parameter::{
         ParameterChange::{self, Decrement, Increment},
@@ -16,6 +17,7 @@ use synth_core::{
 };
 
 use crate::{
+    SharedChain,
     controls::ControlEvent::{
         Encoder1Click, Encoder1Clockwise, Encoder1Counterclockwise, Encoder2Click,
         Encoder2Clockwise, Encoder2Counterclockwise, Encoder3Click, Encoder3Clockwise,
@@ -63,9 +65,7 @@ pub enum ControlEvent {
 pub static CONTROL_BUFFER: Channel<CriticalSectionRawMutex, ControlEvent, 16> = Channel::new();
 
 #[embassy_executor::task]
-pub async fn control_handler(
-    engine: &'static BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
-) {
+pub async fn control_handler(chain: &'static SharedChain) {
     let mut mode_rx = MODE.receiver().unwrap();
     let mut mode_tx = MODE.sender();
     mode_tx.send(Mode::EngineMain);
@@ -77,7 +77,7 @@ pub async fn control_handler(
 
         let mode = mode_rx.get().await;
         match mode {
-            Mode::EngineMain => engine_main_handler(engine, control_event).await,
+            Mode::EngineMain => engine_main_handler(chain, control_event).await,
             Mode::EngineEnvelope => {}
             Mode::EngineLFO => {}
             Mode::FiltersMain => {}
@@ -89,10 +89,7 @@ pub async fn control_handler(
     }
 }
 
-async fn engine_main_handler(
-    engine: &'static BlockingMutex<CriticalSectionRawMutex, RefCell<FMSynth>>,
-    control_event: ControlEvent,
-) {
+async fn engine_main_handler(chain: &'static SharedChain, control_event: ControlEvent) {
     serial_log(&format!("EngineMain: {:?}", control_event));
 
     if let Some((param_index, change)) = match control_event {
@@ -104,10 +101,10 @@ async fn engine_main_handler(
         Encoder3Counterclockwise => Some((2, Decrement)),
         _ => None,
     } {
-        engine.lock(|e: &RefCell<FMSynth>| {
-            let mut engine = e.borrow_mut();
+        chain.lock(|c: &RefCell<Chain>| {
+            let mut chain = c.borrow_mut();
 
-            engine.update_parameter(param_index, change);
+            chain.get_engine().update_parameter(param_index, change);
         });
     }
 }

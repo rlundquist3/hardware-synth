@@ -11,7 +11,7 @@ use embedded_layout::{
     prelude::*,
 };
 use micromath::F32Ext;
-use synth_core::parameter::Parameter;
+use synth_core::{parameter::Parameter, utils::LFO_AMP_RANGE};
 
 use crate::footer::FooterMenu;
 
@@ -57,7 +57,7 @@ impl Drawable for LfoLayout {
 
             points.push(Point {
                 x,
-                y: (height as f32 / 10.0 * y) as i32,
+                y: (height as f32 / (2.0 * LFO_AMP_RANGE.1) * y) as i32,
             });
         }
         let curve =
@@ -68,7 +68,7 @@ impl Drawable for LfoLayout {
             vertical::Center,
         ));
 
-        let footer = FooterMenu::new(["main", "lfo", "env", "filt", "fx"], 1);
+        let footer = FooterMenu::new(["main", "lfo", "env", "fltr", "fx"], 1);
 
         LinearLayout::vertical(Chain::new(plot).append(footer))
             .with_alignment(horizontal::Center)
