@@ -13,7 +13,10 @@ use embedded_layout::{
 use micromath::F32Ext;
 use synth_core::{parameter::Parameter, utils::LFO_AMP_RANGE};
 
-use crate::footer::FooterMenu;
+use crate::{
+    footer::FooterMenu,
+    shared::{EMPTY_STYLE, LINE_STYLE},
+};
 
 pub struct LfoLayout {
     amp: f32,
@@ -48,7 +51,7 @@ impl Drawable for LfoLayout {
                 height: height as u32,
             },
         )
-        .into_styled(PrimitiveStyle::new());
+        .into_styled(EMPTY_STYLE);
 
         let mut points = Vec::new();
         for x in 0..(width) {
@@ -60,8 +63,7 @@ impl Drawable for LfoLayout {
                 y: (height as f32 / (2.0 * LFO_AMP_RANGE.1) * y) as i32,
             });
         }
-        let curve =
-            Polyline::new(&points).into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1));
+        let curve = Polyline::new(&points).into_styled(LINE_STYLE);
         let plot = Chain::new(plot_container).append(curve.align_to(
             &plot_container,
             horizontal::Center,

@@ -10,6 +10,8 @@ use embedded_layout::{
     prelude::*,
 };
 
+use crate::shared::SMALL_TEXT_STYLE;
+
 type ComposedItem<'a> = Link<
     Text<'a, MonoTextStyle<'a, BinaryColor>>,
     Chain<embedded_graphics::primitives::Styled<Rectangle, PrimitiveStyle<BinaryColor>>>,
@@ -36,7 +38,6 @@ impl<'a> Item<'a> {
             })
             .stroke_color(BinaryColor::On)
             .build();
-        let button_text_style = MonoTextStyle::new(&FONT_4X6, BinaryColor::On);
 
         let container = Rectangle::new(
             Point::zero(),
@@ -46,7 +47,7 @@ impl<'a> Item<'a> {
             },
         )
         .into_styled(button_style);
-        let text = Text::new(self.text, Point::zero(), button_text_style);
+        let text = Text::new(self.text, Point::zero(), SMALL_TEXT_STYLE);
 
         Chain::new(container).append(text.align_to(
             &container,

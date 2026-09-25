@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use embedded_graphics::{
     pixelcolor::BinaryColor,
     prelude::*,
-    primitives::{Line, PrimitiveStyle, Rectangle},
+    primitives::{Polyline, PrimitiveStyle, Rectangle},
 };
 use embedded_layout::{
     layout::linear::{LinearLayout, spacing},
@@ -10,7 +10,7 @@ use embedded_layout::{
 };
 use synth_core::parameter::Parameter;
 
-use crate::footer::FooterMenu;
+use crate::{footer::FooterMenu, shared::LINE_STYLE};
 
 pub struct EnvelopeLayout {
     a: f32,
@@ -40,32 +40,30 @@ impl Drawable for EnvelopeLayout {
     where
         D: DrawTarget<Color = Self::Color>,
     {
-        let line_style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
-
         let width: i32 = 100;
         let height: i32 = 48;
-        let start_point = Point { x: 0, y: height };
-        let attack_point = Point {
-            x: (self.a / 2.0 * width as f32 / 3.0) as i32,
-            y: 0,
-        };
-        let decay_point = Point {
-            x: attack_point.x + (self.d / 2.0 * width as f32 / 3.0) as i32,
-            y: ((1.0 - self.s) * height as f32) as i32,
-        };
-        let release_point = Point {
-            x: width - (self.r / 2.0 * width as f32 / 3.0) as i32,
-            y: ((1.0 - self.s) * height as f32) as i32,
-        };
-        let end_point = Point {
-            x: width,
-            y: height,
-        };
+        let points = [
+            Point { x: 0, y: height },
+            Point {
+                x: (self.a / 2.0 * width as f32 / 3.0) as i32,
+                y: 0,
+            },
+            Point {
+                x: (self.a / 2.0 * width as f32 / 3.0) as i32
+                    + (self.d / 2.0 * width as f32 / 3.0) as i32,
+                y: ((1.0 - self.s) * height as f32) as i32,
+            },
+            Point {
+                x: width - (self.r / 2.0 * width as f32 / 3.0) as i32,
+                y: ((1.0 - self.s) * height as f32) as i32,
+            },
+            Point {
+                x: width,
+                y: height,
+            },
+        ];
 
-        let envelope = Chain::new(Line::new(start_point, attack_point).into_styled(line_style))
-            .append(Line::new(attack_point, decay_point).into_styled(line_style))
-            .append(Line::new(decay_point, release_point).into_styled(line_style))
-            .append(Line::new(release_point, end_point).into_styled(line_style));
+        let envelope = Polyline::new(&points).into_styled(LINE_STYLE);
 
         let footer = FooterMenu::new(["main", "lfo", "env", "fltr", "fx"], 2);
 
