@@ -35,7 +35,7 @@ pub enum Mode {
     EngineEnvelope,
     EngineLFO,
     FiltersMain,
-    FilterDetail,
+    FiltersDetail,
     EffectsMain,
     EffectsDetail,
 }
@@ -81,7 +81,7 @@ pub async fn control_handler(chain: &'static SharedChain) {
             Mode::EngineEnvelope => {}
             Mode::EngineLFO => {}
             Mode::FiltersMain => {}
-            Mode::FilterDetail => {}
+            Mode::FiltersDetail => {}
             Mode::EffectsMain => {}
             Mode::EffectsDetail => {}
         }

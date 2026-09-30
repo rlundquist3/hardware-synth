@@ -11,6 +11,8 @@ use crate::{
     },
 };
 
+pub const Q_RANGE: (f32, f32) = (0.1, 10.0);
+
 pub type NormalizedCoefficientsFn = fn(f32, f32) -> ((f32, f32, f32), (f32, f32, f32));
 
 #[derive(Clone, Debug)]
@@ -44,7 +46,7 @@ impl Biquad {
                 Parameter::new("Cutoff", cutoff_freq, 10.0, cutoff_freq_range, |v| {
                     format!("{:.0}Hz", v)
                 }),
-                Parameter::new("Q", q, 0.1, (0.1, 30.0), |v| format!("{:.1}", v)),
+                Parameter::new("Q", q, 0.1, Q_RANGE, |v| format!("{:.1}", v)),
             ],
             a,
             b,
@@ -91,17 +93,19 @@ impl UserParameters for Biquad {
     }
 
     fn update_parameter(&mut self, index: usize, change: ParameterChange) -> Option<Parameter> {
-        let mut param = self.parameters.get_mut(index)?.clone();
+        let param = self.parameters.get_mut(index)?;
         let delta = match change {
             Increment => param.delta,
             Decrement => -param.delta,
         };
         param.set_value((param.get_value() + delta).clamp(param.range.0, param.range.1));
 
+        let updated = param.clone();
+
         if index != 0 {
             self.recalculate_coefficients();
         }
 
-        Some(param.clone())
+        Some(updated)
     }
 }

@@ -12,7 +12,7 @@ use synth_core::engines::fm::FMSynth;
 use crate::controls::{
     CONTROL_BUFFER, ControlEvent, MODE,
     Mode::{
-        EffectsDetail, EffectsMain, EngineEnvelope, EngineLFO, EngineMain, FilterDetail,
+        EffectsDetail, EffectsMain, EngineEnvelope, EngineLFO, EngineMain, FiltersDetail,
         FiltersMain,
     },
     engine_main_handler,
@@ -125,7 +125,7 @@ pub async fn encoder_click_handler(encoder_index: usize, mut sw: ExtiInput<'stat
 //             EngineEnvelope => {}
 //             EngineLFO => {}
 //             FiltersMain => {}
-//             FilterDetail => {}
+//             FiltersDetail => {}
 //             EffectsMain => {}
 //             EffectsDetail => {}
 //         }

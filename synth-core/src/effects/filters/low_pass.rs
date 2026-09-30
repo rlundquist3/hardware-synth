@@ -3,6 +3,8 @@ use micromath::F32Ext;
 
 use crate::{SAMPLE_RATE, effects::filters::biquad::Biquad};
 
+pub const LP_CUTOFF_RANGE: (f32, f32) = (0.0, 600.0);
+
 fn get_normalized_coefficients(cutoff_freq: f32, q: f32) -> ((f32, f32, f32), (f32, f32, f32)) {
     let k: f32 = (PI * cutoff_freq / SAMPLE_RATE as f32).tan();
     let a_0 = 1.0 + k / q + k.powf(2.0);
@@ -25,7 +27,7 @@ pub fn new(cutoff_freq: f32, q: f32) -> Biquad {
     Biquad::new(
         "Low Pass Filter",
         cutoff_freq,
-        (0.0, 600.0),
+        LP_CUTOFF_RANGE,
         q,
         get_normalized_coefficients,
     )

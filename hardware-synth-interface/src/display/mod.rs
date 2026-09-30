@@ -19,7 +19,7 @@ use crate::{
     controls::{
         MODE,
         Mode::{
-            EffectsDetail, EffectsMain, EngineEnvelope, EngineLFO, EngineMain, FilterDetail,
+            EffectsDetail, EffectsMain, EngineEnvelope, EngineLFO, EngineMain, FiltersDetail,
             FiltersMain,
         },
     },
@@ -57,7 +57,7 @@ pub async fn display_handler(mut display: Display, chain: &'static SharedChain) 
             EngineEnvelope => {}
             EngineLFO => {}
             FiltersMain => {}
-            FilterDetail => {}
+            FiltersDetail => {}
             EffectsMain => {}
             EffectsDetail => {}
         }

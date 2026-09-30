@@ -8,6 +8,7 @@ use crate::{
         gain::Gain,
     },
     engines::Engine,
+    parameter::ParameterChange::{Decrement, Increment},
 };
 
 pub struct Chain {

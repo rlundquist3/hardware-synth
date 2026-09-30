@@ -5,6 +5,8 @@ use crate::{SAMPLE_RATE, effects::filters::biquad::Biquad};
 
 // reference: https://www.w3.org/TR/audio-eq-cookbook/#formulae
 
+pub const BP_CUTOFF_RANGE: (f32, f32) = (200.0, 12000.0);
+
 fn get_normalized_coefficients(cutoff_freq: f32, q: f32) -> ((f32, f32, f32), (f32, f32, f32)) {
     let omega = 2.0 * PI * cutoff_freq / SAMPLE_RATE as f32;
     let alpha = omega.sin() / (2.0 * q);
@@ -21,7 +23,7 @@ pub fn new(cutoff_freq: f32, q: f32) -> Biquad {
     Biquad::new(
         "Band Pass Filter",
         cutoff_freq,
-        (200.0, 12000.0),
+        BP_CUTOFF_RANGE,
         q,
         get_normalized_coefficients,
     )
