@@ -5,8 +5,13 @@ use crate::{
     effects::{
         EFFECT_COUNT, Effect,
         chorus::Chorus,
+        echo::Echo,
         filters::{FILTER_COUNT, band_pass, high_pass, low_pass},
+        flanger::Flanger,
         gain::Gain,
+        reverb::Reverb,
+        soft_clipper::SoftClipper,
+        vibrato::Vibrato,
     },
     engines::Engine,
 };
@@ -25,8 +30,15 @@ impl Chain {
             Box::new(high_pass::new(1000.0, 1.0)),
             Box::new(band_pass::new(800.0, 1.0)),
         ]);
-        let effects: Vec<Box<dyn Effect>, EFFECT_COUNT> =
-            Vec::from_array([Box::new(Chorus::new()), Box::new(Gain::new(0.0))]);
+        let effects: Vec<Box<dyn Effect>, EFFECT_COUNT> = Vec::from_array([
+            Box::new(SoftClipper::new(3.0)),
+            Box::new(Echo::new(0.2, 0.4)),
+            Box::new(Vibrato::new(5.0, 0.1, 5.0)),
+            Box::new(Flanger::new(3.0, 0.1, 0.2)),
+            Box::new(Chorus::new()),
+            Box::new(Reverb::new()),
+            Box::new(Gain::new(0.0)),
+        ]);
 
         Chain {
             engine,

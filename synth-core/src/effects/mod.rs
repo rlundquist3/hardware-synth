@@ -1,11 +1,16 @@
 pub mod chorus;
+pub mod echo;
 mod effect_components;
 pub mod filters;
+pub mod flanger;
 pub mod gain;
+pub mod reverb;
+pub mod soft_clipper;
+pub mod vibrato;
 
 use crate::parameter::UserParameters;
 
-pub const EFFECT_COUNT: usize = 2;
+pub const EFFECT_COUNT: usize = 7;
 
 pub trait Effect: UserParameters + Send {
     fn toggle(&mut self);

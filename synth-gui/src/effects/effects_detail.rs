@@ -57,8 +57,12 @@ impl<'a> Drawable for EffectsDetailLayout<'a> {
             .iter()
             .map(|p| Dial::new(p.get_name(), p.get_range(), p.get_value()))
             .collect();
+        let dials = LinearLayout::horizontal(Views::new(&mut items))
+            .with_alignment(vertical::Center)
+            .with_spacing(spacing::FixedMargin(12))
+            .arrange();
 
-        let controls = LinearLayout::horizontal(Chain::new(toggle).append(Views::new(&mut items)))
+        let controls = LinearLayout::horizontal(Chain::new(toggle).append(dials))
             .with_alignment(vertical::Center)
             .with_spacing(spacing::FixedMargin(12))
             .arrange();
