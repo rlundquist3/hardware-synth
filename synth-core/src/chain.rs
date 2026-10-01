@@ -4,6 +4,7 @@ use heapless::Vec;
 use crate::{
     effects::{
         EFFECT_COUNT, Effect,
+        chorus::Chorus,
         filters::{FILTER_COUNT, band_pass, high_pass, low_pass},
         gain::Gain,
     },
@@ -25,7 +26,7 @@ impl Chain {
             Box::new(band_pass::new(800.0, 1.0)),
         ]);
         let effects: Vec<Box<dyn Effect>, EFFECT_COUNT> =
-            Vec::from_array([Box::new(Gain::new(0.0))]);
+            Vec::from_array([Box::new(Chorus::new()), Box::new(Gain::new(0.0))]);
 
         Chain {
             engine,
