@@ -17,7 +17,10 @@ use synth_core::effects::{
 };
 
 use crate::{
-    effects::filters_main::{FilterDiagram, FilterTypes},
+    effects::{
+        controls::Dial,
+        filters_main::{FilterDiagram, FilterTypes},
+    },
     footer::FooterMenu,
     shared::{EMPTY_STYLE, LINE_STYLE},
 };
@@ -79,34 +82,12 @@ impl<'a> Drawable for FiltersDetailLayout<'a> {
             on,
         );
 
-        let q_container = Rectangle::new(
-            Point::zero(),
-            Size {
-                width: 3,
-                height: container_height,
-            },
-        )
-        .into_styled(EMPTY_STYLE);
-        let q_line = Line::new(
-            Point {
-                x: 1,
-                y: diagram_height,
-            },
-            Point {
-                x: 1,
-                y: ((1.0 - q / Q_RANGE.1) * diagram_height as f32) as i32,
-            },
-        )
-        .into_styled(LINE_STYLE);
-        let q_indicator = Chain::new(q_container).append(q_line.align_to(
-            &q_container,
-            horizontal::Center,
-            vertical::Bottom,
-        ));
+        let q_dial = Dial::new("Q", Q_RANGE, q);
 
-        let parameters = LinearLayout::horizontal(Chain::new(diagram).append(q_indicator))
+        let parameters = LinearLayout::horizontal(Chain::new(diagram).append(q_dial))
             .with_alignment(vertical::Center)
-            .with_spacing(spacing::DistributeFill(120));
+            .with_spacing(spacing::DistributeFill(120))
+            .arrange();
 
         let footer = FooterMenu::new(["back", "", "", "", ""], 0);
         LinearLayout::vertical(Chain::new(parameters).append(footer))

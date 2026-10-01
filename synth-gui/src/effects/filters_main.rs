@@ -22,7 +22,10 @@ use synth_core::effects::{
 };
 
 use crate::{
-    effects::filters_main::FilterTypes::{BandPass, HighPass, LowPass},
+    effects::{
+        controls::Toggle,
+        filters_main::FilterTypes::{BandPass, HighPass, LowPass},
+    },
     footer::FooterMenu,
     shared::{EMPTY_STYLE, LINE_STYLE, SELECTED_OPTION_STYLE, SMALL_TEXT_STYLE},
 };
@@ -161,18 +164,11 @@ impl FilterDiagram {
             get_diagram_container(self.container_width, self.container_height, self.selected);
         let curve = Polyline::new(&self.points).into_styled(LINE_STYLE);
 
-        let toggle = Text::new(
-            match self.on {
-                true => "on",
-                false => "off",
-            },
-            Point::zero(),
-            SMALL_TEXT_STYLE,
-        );
+        let toggle = Toggle::new(self.on);
 
         Chain::new(container)
             .append(curve.align_to(&container, horizontal::Center, vertical::Center))
-            .append(toggle.align_to(&container, horizontal::Center, vertical::Top))
+            .append(toggle.align_to(&container, horizontal::Left, vertical::Center))
             .translate(self.position)
     }
 }
