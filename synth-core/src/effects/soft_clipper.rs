@@ -56,7 +56,7 @@ impl Effect for SoftClipper {
     }
 
     fn get_name(&self) -> &str {
-        "Soft Clipper"
+        "Soft Clip"
     }
 }
 

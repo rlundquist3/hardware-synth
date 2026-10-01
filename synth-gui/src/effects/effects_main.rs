@@ -22,6 +22,13 @@ use crate::{
     shared::{EMPTY_STYLE, FILLED_STYLE, SELECTED_OPTION_STYLE, SMALL_TEXT_STYLE},
 };
 
+pub const EFFECT_CHUNK_SIZE: usize = 5;
+pub const EFFECT_CHUNK_COUNT: usize = EFFECT_COUNT / EFFECT_CHUNK_SIZE
+    + match EFFECT_COUNT % EFFECT_CHUNK_SIZE {
+        0 => 0,
+        _ => 1,
+    };
+
 pub struct EffectsMainLayout<'a> {
     effects: &'a mut heapless::Vec<Box<dyn Effect>, EFFECT_COUNT>,
     display_area: Rectangle,
@@ -46,6 +53,8 @@ impl<'a> Drawable for EffectsMainLayout<'a> {
     type Color = BinaryColor;
     type Output = ();
 
+    // TODO: this layout will work for up to 15 effects, once that threshold is crossed,
+    // will need to implement scrolling
     fn draw<D>(&self, target: &mut D) -> Result<Self::Output, D::Error>
     where
         D: DrawTarget<Color = Self::Color>,
@@ -59,14 +68,23 @@ impl<'a> Drawable for EffectsMainLayout<'a> {
             })
             .collect();
 
-        // TODO: scrolling list
-        let list = LinearLayout::vertical(Views::new(&mut items))
-            .with_alignment(horizontal::Left)
+        let mut column_layouts: Vec<_, EFFECT_CHUNK_COUNT> = items
+            .chunks_mut(EFFECT_CHUNK_SIZE)
+            .map(|chunk| {
+                LinearLayout::vertical(Views::new(chunk))
+                    .with_alignment(horizontal::Left)
+                    .arrange()
+            })
+            .collect();
+
+        let columns = LinearLayout::horizontal(Views::new(&mut column_layouts))
+            .with_alignment(vertical::Top)
+            .with_spacing(spacing::DistributeFill(120))
             .arrange();
 
         let footer = FooterMenu::new(["main", "lfo", "env", "fltr", "fx"], 4);
 
-        LinearLayout::vertical(Chain::new(list).append(footer))
+        LinearLayout::vertical(Chain::new(columns).append(footer))
             .with_alignment(horizontal::Center)
             .with_spacing(spacing::DistributeFill(60))
             .arrange()
@@ -97,7 +115,7 @@ impl<'b> EffectItem<'b> {
             Point::zero(),
             Size {
                 width: 40,
-                height: 12,
+                height: 10,
             },
         )
         .into_styled(match self.selected {
@@ -112,7 +130,10 @@ impl<'b> EffectItem<'b> {
         });
 
         Chain::new(container)
-            .append(text.align_to(&container, horizontal::Left, vertical::Center))
+            .append(
+                text.align_to(&container, horizontal::Left, vertical::Center)
+                    .translate(Point { x: 2, y: 0 }),
+            )
             .append(toggle.align_to(&container, horizontal::Right, vertical::Center))
             .translate(self.position)
     }
