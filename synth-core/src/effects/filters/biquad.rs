@@ -17,6 +17,7 @@ pub type NormalizedCoefficientsFn = fn(f32, f32) -> ((f32, f32, f32), (f32, f32,
 
 #[derive(Clone, Debug)]
 pub struct Biquad {
+    on: bool,
     name: String<8>,
     parameters: Vec<Parameter>,
     a: (f32, f32, f32),
@@ -37,12 +38,9 @@ impl Biquad {
         let (a, b) = get_normalized_coefficients(cutoff_freq, q);
 
         Biquad {
+            on: false,
             name: String::try_from(name).unwrap_or(String::new()),
             parameters: vec![
-                Parameter::new("Toggle", 0.0, 1.0, (0.0, 1.0), |v| match v {
-                    1.0 => format!("on"),
-                    _ => format!("off"),
-                }),
                 Parameter::new("Cutoff", cutoff_freq, 10.0, cutoff_freq_range, |v| {
                     format!("{:.0}Hz", v)
                 }),
@@ -57,8 +55,8 @@ impl Biquad {
     }
 
     fn recalculate_coefficients(&mut self) {
-        let cutoff_freq = self.parameters[1].get_value();
-        let q = self.parameters[2].get_value();
+        let cutoff_freq = self.parameters[0].get_value();
+        let q = self.parameters[1].get_value();
 
         let (a, b) = (self.get_normalized_coefficients)(cutoff_freq, q);
 
@@ -68,10 +66,16 @@ impl Biquad {
 }
 
 impl Effect for Biquad {
-    fn process(&mut self, sample: f32) -> f32 {
-        let on = self.parameters[0].get_value();
+    fn toggle(&mut self) {
+        self.on = !self.on;
+    }
 
-        if on != 1.0 {
+    fn is_on(&self) -> bool {
+        self.on
+    }
+
+    fn process(&mut self, sample: f32) -> f32 {
+        if !self.on {
             return sample;
         }
 
@@ -102,9 +106,7 @@ impl UserParameters for Biquad {
 
         let updated = param.clone();
 
-        if index != 0 {
-            self.recalculate_coefficients();
-        }
+        self.recalculate_coefficients();
 
         Some(updated)
     }

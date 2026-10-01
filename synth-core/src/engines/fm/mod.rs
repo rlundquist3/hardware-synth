@@ -39,6 +39,9 @@ impl FMSynth {
         let signal_source = FMSynthVoice::new(envelope.clone());
         let voices = Voices::new((0..VOICE_COUNT).map(|_| signal_source.clone()).collect());
 
+        let mut headroom_gain = Gain::new(-16.0);
+        headroom_gain.toggle();
+
         FMSynth {
             voices,
             parameters: vec![
@@ -58,7 +61,7 @@ impl FMSynth {
                     format!("{:.2}Hz", v)
                 }),
             ],
-            headroom_gain: Gain::new(-16.0),
+            headroom_gain,
             envelope,
         }
     }

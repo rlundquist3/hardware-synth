@@ -6,6 +6,8 @@ use crate::parameter::UserParameters;
 pub const EFFECT_COUNT: usize = 1;
 
 pub trait Effect: UserParameters + Send {
+    fn toggle(&mut self);
+    fn is_on(&self) -> bool;
     fn process(&mut self, sample: f32) -> f32;
     fn get_name(&self) -> &str;
 }

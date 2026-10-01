@@ -1,5 +1,5 @@
 use embedded_graphics::{
-    mono_font::{MonoTextStyle, ascii::FONT_4X6},
+    mono_font::MonoTextStyle,
     pixelcolor::BinaryColor,
     prelude::*,
     primitives::{PrimitiveStyle, PrimitiveStyleBuilder, Rectangle},

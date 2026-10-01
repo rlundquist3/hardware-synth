@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use embedded_graphics::{
     pixelcolor::BinaryColor,
     prelude::*,
-    primitives::{Polyline, PrimitiveStyle, Rectangle},
+    primitives::{Polyline, Rectangle},
 };
 use embedded_layout::{
     layout::linear::{LinearLayout, spacing},

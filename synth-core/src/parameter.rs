@@ -30,6 +30,14 @@ impl Parameter {
         self.value
     }
 
+    pub fn get_range(&self) -> (f32, f32) {
+        self.range
+    }
+
+    pub fn get_name(&self) -> &str {
+        self.name
+    }
+
     pub fn render_value(&self) -> String {
         (self.render)(self.value)
     }

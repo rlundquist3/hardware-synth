@@ -4,11 +4,9 @@ use embedded_graphics::{
     draw_target::DrawTarget,
     geometry::{Point, Size},
     pixelcolor::BinaryColor,
-    primitives::{Line, Polyline, Primitive, Rectangle},
-    text::Text,
+    primitives::{Line, Primitive, Rectangle},
 };
 use embedded_layout::{
-    View,
     align::{Align, horizontal, vertical},
     layout::linear::{LinearLayout, spacing},
     object_chain::Chain,
@@ -54,9 +52,10 @@ impl<'a> Drawable for FiltersDetailLayout<'a> {
     {
         let filter_index = self.navigation_location - 1;
         let filter = &self.filters[filter_index];
-        let on = filter.get_parameters()[0].get_value() == 1.0;
-        let cutoff_freq = filter.get_parameters()[1].get_value();
-        let q = filter.get_parameters()[2].get_value();
+        let on = filter.is_on();
+        let params = filter.get_parameters();
+        let cutoff_freq = params[0].get_value();
+        let q = params[1].get_value();
         let filter_type = match self.navigation_location {
             1 => FilterTypes::LowPass,
             2 => FilterTypes::BandPass,

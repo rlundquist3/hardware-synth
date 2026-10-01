@@ -12,6 +12,7 @@ pub const LINE_STYLE: PrimitiveStyle<BinaryColor> = PrimitiveStyle::with_stroke(
 pub const EMPTY_STYLE: PrimitiveStyle<BinaryColor> = PrimitiveStyle::new();
 pub const SELECTED_OPTION_STYLE: PrimitiveStyle<BinaryColor> =
     PrimitiveStyle::with_stroke(BinaryColor::On, 1);
+pub const FILLED_STYLE: PrimitiveStyle<BinaryColor> = PrimitiveStyle::with_fill(BinaryColor::On);
 
 pub const BASE_TEXT_STYLE: MonoTextStyle<'_, BinaryColor> =
     MonoTextStyle::new(&FONT_6X9, BinaryColor::On);

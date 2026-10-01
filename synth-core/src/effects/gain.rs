@@ -13,6 +13,7 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct Gain {
+    on: bool,
     gain_db: f32,
     gain_linear: f32,
     parameters: Vec<Parameter>,
@@ -21,6 +22,7 @@ pub struct Gain {
 impl Gain {
     pub fn new(gain_db: f32) -> Self {
         Gain {
+            on: false,
             gain_db,
             gain_linear: db_to_linear_gain(gain_db),
             parameters: vec![Parameter::new("Gain", gain_db, 0.5, (-16.0, 12.0), |v| {
@@ -31,7 +33,19 @@ impl Gain {
 }
 
 impl Effect for Gain {
+    fn toggle(&mut self) {
+        self.on = !self.on;
+    }
+
+    fn is_on(&self) -> bool {
+        self.on
+    }
+
     fn process(&mut self, sample: f32) -> f32 {
+        if !self.on {
+            return sample;
+        }
+
         let current_db = self.parameters[0].get_value();
         if current_db != self.gain_db {
             self.gain_db = current_db;
@@ -52,6 +66,7 @@ impl UserParameters for Gain {
 
     fn update_parameter(&mut self, index: usize, change: ParameterChange) -> Option<Parameter> {
         let param = self.parameters.get_mut(index)?;
+
         let delta = match change {
             Increment => param.delta,
             Decrement => -param.delta,

@@ -4,7 +4,7 @@ use embedded_graphics::{
     draw_target::DrawTarget,
     geometry::{Point, Size},
     pixelcolor::BinaryColor,
-    primitives::{Line, Polyline, Primitive, Rectangle},
+    primitives::{Polyline, Primitive, Rectangle},
     text::Text,
 };
 use embedded_layout::{
@@ -16,7 +16,7 @@ use embedded_layout::{
 use synth_core::effects::{
     Effect,
     filters::{
-        FILTER_COUNT, band_pass::BP_CUTOFF_RANGE, biquad::Q_RANGE, high_pass::HP_CUTOFF_RANGE,
+        FILTER_COUNT, band_pass::BP_CUTOFF_RANGE, high_pass::HP_CUTOFF_RANGE,
         low_pass::LP_CUTOFF_RANGE,
     },
 };
@@ -68,7 +68,7 @@ impl<'a> Drawable for FiltersMainLayout<'a> {
             diagram_height,
             200.0,
             self.navigation_location == 1,
-            self.filters[0].get_parameters()[0].get_value() == 1.0,
+            self.filters[0].is_on(),
         );
         let bp_diagram = FilterDiagram::new(
             FilterTypes::BandPass,
@@ -78,7 +78,7 @@ impl<'a> Drawable for FiltersMainLayout<'a> {
             diagram_height,
             800.0,
             self.navigation_location == 2,
-            self.filters[1].get_parameters()[0].get_value() == 1.0,
+            self.filters[1].is_on(),
         );
         let hp_diagram = FilterDiagram::new(
             FilterTypes::HighPass,
@@ -88,7 +88,7 @@ impl<'a> Drawable for FiltersMainLayout<'a> {
             diagram_height,
             1000.0,
             self.navigation_location == 3,
-            self.filters[2].get_parameters()[0].get_value() == 1.0,
+            self.filters[2].is_on(),
         );
 
         let filter_options =
