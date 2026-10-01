@@ -1,10 +1,6 @@
 use alloc::boxed::Box;
 use embedded_graphics::{
-    Drawable,
-    draw_target::DrawTarget,
-    geometry::{Point, Size},
-    pixelcolor::BinaryColor,
-    primitives::{Line, Primitive, Rectangle},
+    Drawable, draw_target::DrawTarget, pixelcolor::BinaryColor, primitives::Rectangle,
 };
 use embedded_layout::{
     align::{Align, horizontal, vertical},
@@ -22,7 +18,6 @@ use crate::{
         filters_main::{FilterDiagram, FilterTypes},
     },
     footer::FooterMenu,
-    shared::{EMPTY_STYLE, LINE_STYLE},
 };
 
 pub struct FiltersDetailLayout<'a> {

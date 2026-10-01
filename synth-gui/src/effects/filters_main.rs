@@ -5,7 +5,6 @@ use embedded_graphics::{
     geometry::{Point, Size},
     pixelcolor::BinaryColor,
     primitives::{Polyline, Primitive, Rectangle},
-    text::Text,
 };
 use embedded_layout::{
     View,
@@ -27,7 +26,7 @@ use crate::{
         filters_main::FilterTypes::{BandPass, HighPass, LowPass},
     },
     footer::FooterMenu,
-    shared::{EMPTY_STYLE, LINE_STYLE, SELECTED_OPTION_STYLE, SMALL_TEXT_STYLE},
+    shared::{EMPTY_STYLE, LINE_STYLE, SELECTED_OPTION_STYLE},
 };
 
 pub struct FiltersMainLayout<'a> {
@@ -116,12 +115,8 @@ pub enum FilterTypes {
     HighPass,
 }
 pub struct FilterDiagram {
-    filter_type: FilterTypes,
     container_width: u32,
     container_height: u32,
-    diagram_width: i32,
-    diagram_height: i32,
-    cutoff_freq: f32,
     points: [Point; 6],
     selected: bool,
     on: bool,
@@ -146,12 +141,8 @@ impl FilterDiagram {
         };
 
         FilterDiagram {
-            filter_type,
             container_width,
             container_height,
-            diagram_width,
-            diagram_height,
-            cutoff_freq,
             points,
             selected,
             on,

@@ -1,11 +1,7 @@
 use alloc::boxed::Box;
 use embedded_graphics::{
-    Drawable,
-    draw_target::DrawTarget,
-    geometry::{Point, Size},
-    pixelcolor::BinaryColor,
-    primitives::{Primitive, Rectangle},
-    text::Text,
+    Drawable, draw_target::DrawTarget, geometry::Point, pixelcolor::BinaryColor,
+    primitives::Rectangle, text::Text,
 };
 use embedded_layout::{
     align::{Align, horizontal, vertical},
@@ -19,7 +15,7 @@ use synth_core::effects::{EFFECT_COUNT, Effect};
 use crate::{
     effects::controls::{Dial, Toggle},
     footer::FooterMenu,
-    shared::{FILLED_STYLE, SELECTED_OPTION_STYLE, SMALL_TEXT_STYLE},
+    shared::SMALL_TEXT_STYLE,
 };
 
 pub struct EffectsDetailLayout<'a> {
