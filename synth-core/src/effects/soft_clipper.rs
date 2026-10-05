@@ -10,6 +10,13 @@ use crate::{
     },
     utils::db_to_linear_gain,
 };
+use micromath::F32Ext;
+
+/// micromath does not have a tanh function - calculate using an alternate form
+fn tanh(x: f32) -> f32 {
+    // 1 - 2/(1 + e^(2 x))
+    1.0 - 2.0 / (1.0 + (2.0 * x).exp())
+}
 
 #[derive(Debug)]
 pub struct SoftClipper {
@@ -52,7 +59,7 @@ impl Effect for SoftClipper {
             self.gain_linear = db_to_linear_gain(current_db);
         }
 
-        (self.gain_linear * sample).tanh() / self.gain_linear.tanh()
+        tanh(self.gain_linear * sample) / tanh(self.gain_linear)
     }
 
     fn get_name(&self) -> &str {

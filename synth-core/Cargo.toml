@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 heapless = "0.9.3"
 micromath = "2.1.0"
-rand = "0.10.2"
+rand_xoshiro = "0.8.1"
 
 [dev-dependencies]
 approx = "0.5.1"

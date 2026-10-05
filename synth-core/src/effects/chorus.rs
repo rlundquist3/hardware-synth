@@ -3,7 +3,10 @@ use core::ops::Range;
 use alloc::vec;
 use alloc::{format, vec::Vec};
 
-use rand::random_range;
+use rand_xoshiro::{
+    Xoroshiro128Plus,
+    rand_core::{Rng, SeedableRng},
+};
 
 use crate::{
     SAMPLE_RATE,
@@ -20,6 +23,12 @@ const AMP_RANGE: Range<f32> = 0.05..0.2;
 const FREQ_RANGE: Range<f32> = 0.1..4.0;
 const MATCH_THRESHOLD: f32 = 0.01;
 
+fn random_range(rng: &mut Xoroshiro128Plus, range: Range<f32>) -> f32 {
+    let multiplier = (rng.next_u32() >> 8) as f32 / (1u32 << 24) as f32;
+
+    range.start + multiplier * (range.end - range.start)
+}
+
 #[derive(Debug)]
 pub struct Chorus {
     on: bool,
@@ -27,6 +36,7 @@ pub struct Chorus {
     voice_parameters: Vec<Parameter>,
     voice_parameter_targets: Vec<(f32, f32)>,
     parameters: Vec<Parameter>,
+    rand_rng: Xoroshiro128Plus,
 }
 
 impl Chorus {
@@ -39,10 +49,12 @@ impl Chorus {
         let mut voices = Vec::new();
         let mut voice_parameter_targets = Vec::new();
 
+        let mut rand_rng = Xoroshiro128Plus::seed_from_u64(0);
+
         for _ in 0..4 {
-            let d = random_range(DELAY_RANGE);
-            let a = random_range(AMP_RANGE);
-            let f = random_range(FREQ_RANGE);
+            let d = random_range(&mut rand_rng, DELAY_RANGE);
+            let a = random_range(&mut rand_rng, AMP_RANGE);
+            let f = random_range(&mut rand_rng, FREQ_RANGE);
 
             let delay_param =
                 Parameter::new("Delay", d, 1.0, (DELAY_RANGE.start, DELAY_RANGE.end), |v| {
@@ -71,16 +83,20 @@ impl Chorus {
             voice_parameters,
             voice_parameter_targets,
             parameters,
+            rand_rng,
         }
     }
 
     fn adjust_parameters(&mut self) {
+        let rand_rng = &mut self.rand_rng;
+        let targets = &mut self.voice_parameter_targets;
+
         self.voice_parameters
             .iter_mut()
             .enumerate()
             .for_each(|(i, p)| {
                 let current = p.get_value();
-                let (target, step) = self.voice_parameter_targets[i];
+                let (target, step) = targets[i];
 
                 if (target - current).abs() < MATCH_THRESHOLD {
                     let range = match i % 3 {
@@ -89,10 +105,10 @@ impl Chorus {
                         2 => FREQ_RANGE,
                         _ => DELAY_RANGE,
                     };
-                    let new_target = random_range(range);
-                    let new_step =
-                        (new_target - current) / (random_range(1.0..5.0) * SAMPLE_RATE as f32);
-                    self.voice_parameter_targets[i] = (new_target, new_step);
+                    let new_target = random_range(rand_rng, range);
+                    let new_step = (new_target - current)
+                        / (random_range(rand_rng, 1.0..5.0) * SAMPLE_RATE as f32);
+                    targets[i] = (new_target, new_step);
                 } else {
                     p.set_value(current + step);
                 }

@@ -23,9 +23,15 @@ use crate::{
             FiltersMain,
         },
     },
-    display::fm::render_engine_main,
+    display::{
+        effects::{render_effects_detail, render_effects_main},
+        filters::{render_filters_detail, render_filters_main},
+        fm::{render_engine_envelope, render_engine_lfo, render_engine_main},
+    },
 };
 
+mod effects;
+mod filters;
 mod fm;
 
 pub type Display = Ssd1306<
@@ -54,12 +60,12 @@ pub async fn display_handler(mut display: Display, chain: &'static SharedChain) 
         let mode = mode_rx.get().await;
         match mode {
             EngineMain => render_engine_main(&mut display, chain).await.unwrap(),
-            EngineEnvelope => {}
-            EngineLFO => {}
-            FiltersMain => {}
-            FiltersDetail => {}
-            EffectsMain => {}
-            EffectsDetail => {}
+            EngineLFO => render_engine_lfo(&mut display, chain).await.unwrap(),
+            EngineEnvelope => render_engine_envelope(&mut display, chain).await.unwrap(),
+            FiltersMain => render_filters_main(&mut display, chain).await.unwrap(),
+            FiltersDetail => render_filters_detail(&mut display, chain).await.unwrap(),
+            EffectsMain => render_effects_main(&mut display, chain).await.unwrap(),
+            EffectsDetail => render_effects_detail(&mut display, chain).await.unwrap(),
         }
 
         display.flush().unwrap();

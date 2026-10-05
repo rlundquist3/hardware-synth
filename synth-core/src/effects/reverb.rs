@@ -1,5 +1,6 @@
 use alloc::vec;
 use alloc::{format, vec::Vec};
+use micromath::F32Ext;
 
 use crate::{
     effects::{
