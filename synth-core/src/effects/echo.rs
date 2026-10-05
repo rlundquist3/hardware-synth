@@ -1,5 +1,6 @@
 use crate::{
     SAMPLE_RATE,
+    buffer_pool::BufferPool,
     effects::Effect,
     parameter::{
         Parameter,
@@ -15,18 +16,18 @@ const MAX_DELAY_SECS: f32 = 1.0;
 #[derive(Debug)]
 pub struct Echo {
     on: bool,
-    buffer: Vec<f32>,
+    buffer: &'static mut [f32],
     write_index: usize,
     parameters: Vec<Parameter>,
 }
 
 impl Echo {
-    pub fn new(delay_secs: f32, amp: f32) -> Self {
+    pub fn new(delay_secs: f32, amp: f32, buffer_pool: &mut BufferPool) -> Self {
         let max_samples = (MAX_DELAY_SECS * SAMPLE_RATE as f32) as usize;
 
         Echo {
             on: false,
-            buffer: vec![0.0; max_samples],
+            buffer: buffer_pool.take(max_samples),
             write_index: 0,
             parameters: vec![
                 Parameter::new("Delay", delay_secs, 0.1, (0.0, 1.0), |v| {

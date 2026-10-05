@@ -8,6 +8,7 @@ use rand_xoshiro::{
     rand_core::{Rng, SeedableRng},
 };
 
+use crate::buffer_pool::BufferPool;
 use crate::{
     SAMPLE_RATE,
     effects::{Effect, EffectComponent, effect_components::lfo_delay_line::LFODelay},
@@ -40,7 +41,7 @@ pub struct Chorus {
 }
 
 impl Chorus {
-    pub fn new() -> Self {
+    pub fn new(buffer_pool: &mut BufferPool) -> Self {
         let parameters = vec![Parameter::new("Dry/Wet", 0.3, 0.05, (0.0, 0.5), |v| {
             format!("{:.2}/{:.2}", 1.0 - v, v)
         })];
@@ -74,7 +75,12 @@ impl Chorus {
             voice_parameter_targets.push((d, 0.0));
             voice_parameter_targets.push((a, 0.0));
             voice_parameter_targets.push((f, 0.0));
-            voices.push(LFODelay::new(delay_param, amp_param, freq_param));
+            voices.push(LFODelay::new(
+                delay_param,
+                amp_param,
+                freq_param,
+                buffer_pool,
+            ));
         }
 
         Chorus {

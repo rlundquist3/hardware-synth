@@ -2,6 +2,7 @@ use alloc::vec;
 use alloc::{format, vec::Vec};
 use micromath::F32Ext;
 
+use crate::buffer_pool::BufferPool;
 use crate::{
     effects::{
         Effect, EffectComponent,
@@ -28,24 +29,24 @@ pub struct Reverb {
 }
 
 impl Reverb {
-    pub fn new() -> Self {
+    pub fn new(buffer_pool: &mut BufferPool) -> Self {
         Reverb {
             on: false,
             lbcf_array: vec![
-                LBCF::new(0.84, 0.2, 1557),
-                LBCF::new(0.84, 0.2, 1617),
-                LBCF::new(0.84, 0.2, 1491),
-                LBCF::new(0.84, 0.2, 1422),
-                LBCF::new(0.84, 0.2, 1277),
-                LBCF::new(0.84, 0.2, 1356),
-                LBCF::new(0.84, 0.2, 1188),
-                LBCF::new(0.84, 0.2, 1116),
+                LBCF::new(0.84, 0.2, 1557, buffer_pool),
+                LBCF::new(0.84, 0.2, 1617, buffer_pool),
+                LBCF::new(0.84, 0.2, 1491, buffer_pool),
+                LBCF::new(0.84, 0.2, 1422, buffer_pool),
+                LBCF::new(0.84, 0.2, 1277, buffer_pool),
+                LBCF::new(0.84, 0.2, 1356, buffer_pool),
+                LBCF::new(0.84, 0.2, 1188, buffer_pool),
+                LBCF::new(0.84, 0.2, 1116, buffer_pool),
             ],
             ap_array: vec![
-                new_ap(0.5, 225),
-                new_ap(0.5, 556),
-                new_ap(0.5, 441),
-                new_ap(0.5, 341),
+                new_ap(0.5, 225, buffer_pool),
+                new_ap(0.5, 556, buffer_pool),
+                new_ap(0.5, 441, buffer_pool),
+                new_ap(0.5, 341, buffer_pool),
             ],
             parameters: vec![Parameter::new("Dry/Wet", 0.5, 0.05, (0.0, 1.0), |v| {
                 format!("{:.2}/{:.2}", 1.0 - v, v)

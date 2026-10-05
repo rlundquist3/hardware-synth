@@ -1,6 +1,7 @@
 use alloc::vec;
 use alloc::{format, vec::Vec};
 
+use crate::buffer_pool::BufferPool;
 use crate::{
     effects::{Effect, EffectComponent, effect_components::lfo_delay_line::LFODelay},
     parameter::{
@@ -18,7 +19,7 @@ pub struct Flanger {
 }
 
 impl Flanger {
-    pub fn new(delay_ms: f32, amp: f32, freq: f32) -> Self {
+    pub fn new(delay_ms: f32, amp: f32, freq: f32, buffer_pool: &mut BufferPool) -> Self {
         let parameters = vec![
             Parameter::new("Delay", delay_ms, 1.0, (0.0, 15.0), |v| {
                 format!("{:.0}ms", v)
@@ -33,6 +34,7 @@ impl Flanger {
                 parameters[0].clone(),
                 parameters[1].clone(),
                 parameters[2].clone(),
+                buffer_pool,
             ),
             parameters,
         }

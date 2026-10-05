@@ -2,6 +2,7 @@ use alloc::boxed::Box;
 use heapless::Vec;
 
 use crate::{
+    buffer_pool::{self, BufferPool},
     effects::{
         EFFECT_COUNT, Effect,
         chorus::Chorus,
@@ -24,7 +25,7 @@ pub struct Chain {
 }
 
 impl Chain {
-    pub fn new(engine: Box<dyn Engine>) -> Self {
+    pub fn new(engine: Box<dyn Engine>, buffer_pool: &mut BufferPool) -> Self {
         let filters: Vec<Box<dyn Effect>, FILTER_COUNT> = Vec::from_array([
             Box::new(low_pass::new(200.0, 1.0)),
             Box::new(high_pass::new(1000.0, 1.0)),
@@ -32,11 +33,11 @@ impl Chain {
         ]);
         let effects: Vec<Box<dyn Effect>, EFFECT_COUNT> = Vec::from_array([
             Box::new(SoftClipper::new(3.0)),
-            Box::new(Echo::new(0.2, 0.4)),
-            Box::new(Vibrato::new(5.0, 0.1, 5.0)),
-            Box::new(Flanger::new(3.0, 0.1, 0.2)),
-            Box::new(Chorus::new()),
-            Box::new(Reverb::new()),
+            Box::new(Echo::new(0.2, 0.4, buffer_pool)),
+            Box::new(Vibrato::new(5.0, 0.1, 5.0, buffer_pool)),
+            Box::new(Flanger::new(3.0, 0.1, 0.2, buffer_pool)),
+            Box::new(Chorus::new(buffer_pool)),
+            Box::new(Reverb::new(buffer_pool)),
             Box::new(Gain::new(0.0)),
         ]);
 

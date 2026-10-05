@@ -1,27 +1,31 @@
 use crate::{
     SAMPLE_RATE,
+    buffer_pool::BufferPool,
     effects::EffectComponent,
     oscillator::{Oscillator, Waveform::Sine},
     parameter::Parameter,
 };
-use alloc::vec;
-use alloc::{format, vec::Vec};
 use micromath::F32Ext;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct LFODelay {
     lfo: Oscillator,
     lfo_amp: Parameter,
     lfo_freq: Parameter,
     delay_ms: Parameter,
-    buffer: Vec<f32>,
+    buffer: &'static mut [f32],
     write_index: usize,
 }
 
 const MAX_DELAY_SECS: f32 = 100.0 / 1000.0;
 
 impl LFODelay {
-    pub fn new(delay_ms: Parameter, amp: Parameter, freq: Parameter) -> Self {
+    pub fn new(
+        delay_ms: Parameter,
+        amp: Parameter,
+        freq: Parameter,
+        buffer_pool: &mut BufferPool,
+    ) -> Self {
         let mut lfo = Oscillator::new(Sine);
         lfo.set_freq(freq.get_value());
         let max_samples = (MAX_DELAY_SECS * SAMPLE_RATE as f32) as usize;
@@ -31,7 +35,7 @@ impl LFODelay {
             delay_ms,
             lfo_amp: amp,
             lfo_freq: freq,
-            buffer: vec![0.0; max_samples],
+            buffer: buffer_pool.take(max_samples),
             write_index: 0,
         }
     }

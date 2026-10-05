@@ -9,8 +9,8 @@ mod midi;
 mod panic;
 
 extern crate alloc;
-use alloc::{boxed::Box, format};
-use core::cell::RefCell;
+use alloc::boxed::Box;
+use core::{cell::RefCell, slice::from_raw_parts_mut};
 use daisy_embassy::{
     default_rcc,
     hal::{
@@ -20,6 +20,7 @@ use daisy_embassy::{
         interrupt, peripherals,
     },
     new_daisy_board,
+    sdram::SDRAM_SIZE,
 };
 use defmt_serial as _;
 use embassy_executor::{InterruptExecutor, Spawner};
@@ -30,6 +31,7 @@ use embassy_stm32::{
     usart,
 };
 use embassy_sync::blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex};
+use embassy_time::Delay;
 use ssd1306::{I2CDisplayInterface, Ssd1306, prelude::*};
 use static_cell::StaticCell;
 
@@ -47,7 +49,7 @@ use crate::{
 };
 use logger::{log_handler, serial_log};
 use rust_tinyusb_host::tusb_int_handler;
-use synth_core::{chain::Chain, engines::fm::FMSynth};
+use synth_core::{buffer_pool::BufferPool, chain::Chain, engines::fm::FMSynth};
 
 bind_interrupts!(struct Irqs {
     USART1 => usart::InterruptHandler<peripherals::USART1>;
@@ -102,6 +104,16 @@ async fn main(low_priority_spawner: Spawner) {
     let peripherals = embassy_stm32::init(default_rcc());
     let board = new_daisy_board!(peripherals);
 
+    let mut core_peripherals = cortex_m::Peripherals::take().unwrap();
+    let mut sdram = board
+        .sdram
+        .build(&mut core_peripherals.MPU, &mut core_peripherals.SCB);
+    let backing: &'static mut [f32] = unsafe {
+        let pointer = sdram.init(&mut Delay) as *mut f32;
+        from_raw_parts_mut(pointer, SDRAM_SIZE / core::mem::size_of::<f32>())
+    };
+    let mut buffer_pool = BufferPool::from_slice(backing);
+
     // Start logger setup
     let logger: usart::UartTx<'_, embassy_stm32::mode::Blocking> =
         usart::UartTx::new_blocking(peripherals.USART1, board.pins.d13, usart::Config::default())
@@ -117,9 +129,10 @@ async fn main(low_priority_spawner: Spawner) {
         .prepare_interface(Default::default())
         .await;
     let audio_interface = (audio_interface.start_interface().await).unwrap();
-    let chain = CHAIN.init(BlockingMutex::new(RefCell::new(Chain::new(Box::new(
-        FMSynth::new(),
-    )))));
+    let chain = CHAIN.init(BlockingMutex::new(RefCell::new(Chain::new(
+        Box::new(FMSynth::new()),
+        &mut buffer_pool,
+    ))));
 
     interrupt::USART3.set_priority(Priority::P0);
     let audio_executor = AUDIO_EXECUTOR.start(interrupt::USART3);

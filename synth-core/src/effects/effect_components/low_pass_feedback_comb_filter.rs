@@ -1,24 +1,28 @@
+use crate::buffer_pool::BufferPool;
 use crate::effects::EffectComponent;
-use alloc::vec;
-use alloc::{format, vec::Vec};
 
 // Adapted from https://ccrma.stanford.edu/~jos/pasp/Lowpass_Feedback_Comb_Filter.html
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct LBCF {
     feedback: f32,
     damping: f32,
-    buffer: Vec<f32>,
+    buffer: &'static mut [f32],
     write_index: usize,
     filter_state: f32,
 }
 
 impl LBCF {
-    pub fn new(feedback: f32, damping: f32, delay_samples: u32) -> Self {
+    pub fn new(
+        feedback: f32,
+        damping: f32,
+        delay_samples: u32,
+        buffer_pool: &mut BufferPool,
+    ) -> Self {
         LBCF {
             feedback,
             damping,
-            buffer: vec![0.0; delay_samples as usize],
+            buffer: buffer_pool.take(delay_samples as usize),
             write_index: 0,
             filter_state: 0.0,
         }
