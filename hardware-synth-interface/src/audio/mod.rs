@@ -1,8 +1,7 @@
 use core::cell::RefCell;
 
 use daisy_embassy::audio::{HALF_DMA_BUFFER_LENGTH, Interface, Running};
-use embassy_sync::blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex};
-use synth_core::{chain::Chain, engines::fm::FMSynth, utils::f32_to_sample};
+use synth_core::{chain::Chain, utils::f32_to_sample};
 
 use crate::SharedChain;
 
@@ -11,14 +10,17 @@ pub async fn audio_handler(
     mut interface: Interface<'static, Running>,
     chain: &'static SharedChain,
 ) {
-    interface
-        .start_callback(|_input, output| {
-            chain.lock(|c: &RefCell<Chain>| {
-                audio_output(&mut c.borrow_mut(), output);
-            });
-        })
-        .await
-        .unwrap();
+    // A SAI overrun is recoverable -- a transient on the first block at startup,
+    // for instance -- so restart the callback rather than taking the synth down.
+    loop {
+        let _ = interface
+            .start_callback(|_input, output| {
+                chain.lock(|c: &RefCell<Chain>| {
+                    audio_output(&mut c.borrow_mut(), output);
+                });
+            })
+            .await;
+    }
 }
 
 fn audio_output(chain: &mut Chain, output: &mut [u32]) {

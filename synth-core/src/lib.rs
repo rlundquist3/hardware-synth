@@ -13,4 +13,4 @@ pub mod voices;
 
 extern crate alloc;
 
-pub static SAMPLE_RATE: u32 = 44_100;
+pub static SAMPLE_RATE: u32 = 48_000;

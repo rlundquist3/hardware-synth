@@ -1,4 +1,3 @@
-use alloc::boxed::Box;
 use embedded_graphics::{
     Drawable, draw_target::DrawTarget, geometry::Point, pixelcolor::BinaryColor,
     primitives::Rectangle, text::Text,
@@ -10,7 +9,7 @@ use embedded_layout::{
     view_group::Views,
 };
 use heapless::Vec;
-use synth_core::effects::{EFFECT_COUNT, Effect};
+use synth_core::effects::{EFFECT_COUNT, EffectSnapshot};
 
 use crate::{
     effects::controls::{Dial, Toggle},
@@ -18,15 +17,15 @@ use crate::{
     shared::SMALL_TEXT_STYLE,
 };
 
-pub struct EffectsDetailLayout<'a> {
-    effects: &'a mut heapless::Vec<Box<dyn Effect>, EFFECT_COUNT>,
+pub struct EffectsDetailLayout {
+    effects: Vec<EffectSnapshot, EFFECT_COUNT>,
     display_area: Rectangle,
     navigation_location: usize,
 }
 
-impl<'a> EffectsDetailLayout<'a> {
+impl EffectsDetailLayout {
     pub fn new(
-        effects: &'a mut heapless::Vec<Box<dyn Effect>, EFFECT_COUNT>,
+        effects: Vec<EffectSnapshot, EFFECT_COUNT>,
         display_area: Rectangle,
         navigation_location: usize,
     ) -> Self {
@@ -38,7 +37,7 @@ impl<'a> EffectsDetailLayout<'a> {
     }
 }
 
-impl<'a> Drawable for EffectsDetailLayout<'a> {
+impl Drawable for EffectsDetailLayout {
     type Color = BinaryColor;
     type Output = ();
 
@@ -48,8 +47,8 @@ impl<'a> Drawable for EffectsDetailLayout<'a> {
     {
         let effect_index = self.navigation_location - 1;
         let effect = &self.effects[effect_index];
-        let on = effect.is_on();
-        let params = effect.get_parameters();
+        let on = effect.on;
+        let params = &effect.parameters;
 
         let toggle = Toggle::new(on);
 
@@ -67,7 +66,7 @@ impl<'a> Drawable for EffectsDetailLayout<'a> {
             .with_spacing(spacing::FixedMargin(12))
             .arrange();
 
-        let text = Text::new(effect.get_name(), Point::zero(), SMALL_TEXT_STYLE);
+        let text = Text::new(effect.name, Point::zero(), SMALL_TEXT_STYLE);
         let footer = FooterMenu::new(["back", "", "", "", ""], 0);
 
         LinearLayout::vertical(Chain::new(text).append(controls).append(footer))

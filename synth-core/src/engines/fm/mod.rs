@@ -86,7 +86,7 @@ impl Engine for FMSynth {
         });
     }
 
-    fn get_envelope_parameters(&self) -> Vec<Parameter> {
+    fn get_envelope_parameters(&self) -> &[Parameter] {
         self.envelope.get_parameters()
     }
 
@@ -127,8 +127,8 @@ impl Iterator for Voices<FMSynthVoice> {
 }
 
 impl UserParameters for FMSynth {
-    fn get_parameters(&self) -> Vec<Parameter> {
-        self.parameters.clone()
+    fn get_parameters(&self) -> &[Parameter] {
+        &self.parameters
     }
 
     fn update_parameter(&mut self, index: usize, change: ParameterChange) -> Option<Parameter> {

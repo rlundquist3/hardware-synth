@@ -1,4 +1,3 @@
-use alloc::boxed::Box;
 use embedded_graphics::{
     Drawable,
     draw_target::DrawTarget,
@@ -12,8 +11,9 @@ use embedded_layout::{
     layout::linear::{LinearLayout, spacing},
     object_chain::Chain,
 };
+use heapless::Vec;
 use synth_core::effects::{
-    Effect,
+    EffectSnapshot,
     filters::{
         FILTER_COUNT, band_pass::BP_CUTOFF_RANGE, high_pass::HP_CUTOFF_RANGE,
         low_pass::LP_CUTOFF_RANGE,
@@ -29,15 +29,15 @@ use crate::{
     shared::{EMPTY_STYLE, LINE_STYLE, SELECTED_OPTION_STYLE},
 };
 
-pub struct FiltersMainLayout<'a> {
-    filters: &'a mut heapless::Vec<Box<dyn Effect>, FILTER_COUNT>,
+pub struct FiltersMainLayout {
+    filters: Vec<EffectSnapshot, FILTER_COUNT>,
     display_area: Rectangle,
     navigation_location: usize,
 }
 
-impl<'a> FiltersMainLayout<'a> {
+impl FiltersMainLayout {
     pub fn new(
-        filters: &'a mut heapless::Vec<Box<dyn Effect>, FILTER_COUNT>,
+        filters: Vec<EffectSnapshot, FILTER_COUNT>,
         display_area: Rectangle,
         navigation_location: usize,
     ) -> Self {
@@ -49,7 +49,7 @@ impl<'a> FiltersMainLayout<'a> {
     }
 }
 
-impl<'a> Drawable for FiltersMainLayout<'a> {
+impl Drawable for FiltersMainLayout {
     type Color = BinaryColor;
     type Output = ();
 
@@ -70,7 +70,7 @@ impl<'a> Drawable for FiltersMainLayout<'a> {
             diagram_height,
             200.0,
             self.navigation_location == 1,
-            self.filters[0].is_on(),
+            self.filters[0].on,
         );
         let bp_diagram = FilterDiagram::new(
             FilterTypes::BandPass,
@@ -80,7 +80,7 @@ impl<'a> Drawable for FiltersMainLayout<'a> {
             diagram_height,
             800.0,
             self.navigation_location == 2,
-            self.filters[1].is_on(),
+            self.filters[1].on,
         );
         let hp_diagram = FilterDiagram::new(
             FilterTypes::HighPass,
@@ -90,7 +90,7 @@ impl<'a> Drawable for FiltersMainLayout<'a> {
             diagram_height,
             1000.0,
             self.navigation_location == 3,
-            self.filters[2].is_on(),
+            self.filters[2].on,
         );
 
         let filter_options =

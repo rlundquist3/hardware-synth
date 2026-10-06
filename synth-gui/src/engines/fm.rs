@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use core::fmt::Write;
 use embedded_graphics::{
     mono_font::{MonoTextStyle, ascii::FONT_9X18_BOLD},
@@ -24,7 +23,7 @@ pub struct EngineMainLayout {
 }
 
 impl EngineMainLayout {
-    pub fn new(parameters: Vec<Parameter>, display_area: Rectangle) -> Self {
+    pub fn new(parameters: &[Parameter], display_area: Rectangle) -> Self {
         let mut c: String<8> = String::new();
         let mut m: String<8> = String::new();
         write!(c, "{:.0}", parameters[0].get_value()).unwrap();

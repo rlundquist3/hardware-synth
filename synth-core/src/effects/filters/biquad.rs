@@ -1,6 +1,5 @@
 use alloc::vec;
 use alloc::{format, vec::Vec};
-use heapless::String;
 
 use crate::{
     effects::Effect,
@@ -18,7 +17,7 @@ pub type NormalizedCoefficientsFn = fn(f32, f32) -> ((f32, f32, f32), (f32, f32,
 #[derive(Clone, Debug)]
 pub struct Biquad {
     on: bool,
-    name: String<8>,
+    name: &'static str,
     parameters: Vec<Parameter>,
     a: (f32, f32, f32),
     b: (f32, f32, f32),
@@ -29,7 +28,7 @@ pub struct Biquad {
 
 impl Biquad {
     pub fn new(
-        name: &str,
+        name: &'static str,
         cutoff_freq: f32,
         cutoff_freq_range: (f32, f32),
         q: f32,
@@ -39,7 +38,7 @@ impl Biquad {
 
         Biquad {
             on: false,
-            name: String::try_from(name).unwrap_or(String::new()),
+            name,
             parameters: vec![
                 Parameter::new("Cutoff", cutoff_freq, 10.0, cutoff_freq_range, |v| {
                     format!("{:.0}Hz", v)
@@ -86,14 +85,14 @@ impl Effect for Biquad {
         result
     }
 
-    fn get_name(&self) -> &str {
-        self.name.as_str()
+    fn get_name(&self) -> &'static str {
+        self.name
     }
 }
 
 impl UserParameters for Biquad {
-    fn get_parameters(&self) -> Vec<Parameter> {
-        self.parameters.clone()
+    fn get_parameters(&self) -> &[Parameter] {
+        &self.parameters
     }
 
     fn update_parameter(&mut self, index: usize, change: ParameterChange) -> Option<Parameter> {

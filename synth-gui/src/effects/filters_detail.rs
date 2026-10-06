@@ -1,4 +1,3 @@
-use alloc::boxed::Box;
 use embedded_graphics::{
     Drawable, draw_target::DrawTarget, pixelcolor::BinaryColor, primitives::Rectangle,
 };
@@ -7,8 +6,9 @@ use embedded_layout::{
     layout::linear::{LinearLayout, spacing},
     object_chain::Chain,
 };
+use heapless::Vec;
 use synth_core::effects::{
-    Effect,
+    EffectSnapshot,
     filters::{FILTER_COUNT, biquad::Q_RANGE},
 };
 
@@ -20,15 +20,15 @@ use crate::{
     footer::FooterMenu,
 };
 
-pub struct FiltersDetailLayout<'a> {
-    filters: &'a mut heapless::Vec<Box<dyn Effect>, FILTER_COUNT>,
+pub struct FiltersDetailLayout {
+    filters: Vec<EffectSnapshot, FILTER_COUNT>,
     display_area: Rectangle,
     navigation_location: usize,
 }
 
-impl<'a> FiltersDetailLayout<'a> {
+impl FiltersDetailLayout {
     pub fn new(
-        filters: &'a mut heapless::Vec<Box<dyn Effect>, FILTER_COUNT>,
+        filters: Vec<EffectSnapshot, FILTER_COUNT>,
         display_area: Rectangle,
         navigation_location: usize,
     ) -> Self {
@@ -40,7 +40,7 @@ impl<'a> FiltersDetailLayout<'a> {
     }
 }
 
-impl<'a> Drawable for FiltersDetailLayout<'a> {
+impl Drawable for FiltersDetailLayout {
     type Color = BinaryColor;
     type Output = ();
 
@@ -50,8 +50,8 @@ impl<'a> Drawable for FiltersDetailLayout<'a> {
     {
         let filter_index = self.navigation_location - 1;
         let filter = &self.filters[filter_index];
-        let on = filter.is_on();
-        let params = filter.get_parameters();
+        let on = filter.on;
+        let params = &filter.parameters;
         let cutoff_freq = params[0].get_value();
         let q = params[1].get_value();
         let filter_type = match self.navigation_location {

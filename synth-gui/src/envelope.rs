@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use embedded_graphics::{
     pixelcolor::BinaryColor,
     prelude::*,
@@ -21,7 +20,7 @@ pub struct EnvelopeLayout {
 }
 
 impl EnvelopeLayout {
-    pub fn new(parameters: Vec<Parameter>, display_area: Rectangle) -> Self {
+    pub fn new(parameters: &[Parameter], display_area: Rectangle) -> Self {
         EnvelopeLayout {
             a: parameters[0].get_value(),
             d: parameters[1].get_value(),

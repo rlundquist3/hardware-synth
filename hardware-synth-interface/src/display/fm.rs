@@ -24,10 +24,10 @@ pub async fn render_engine_main(
     chain.lock(|c: &RefCell<Chain>| {
         let mut chain = c.borrow_mut();
 
-        parameters = chain.get_engine().get_parameters();
+        parameters = chain.get_engine().get_parameters().to_vec();
     });
 
-    EngineMainLayout::new(parameters, display_area).draw(display)?;
+    EngineMainLayout::new(&parameters, display_area).draw(display)?;
 
     Ok(())
 }
@@ -42,10 +42,10 @@ pub async fn render_engine_lfo(
     chain.lock(|c: &RefCell<Chain>| {
         let mut chain = c.borrow_mut();
 
-        parameters = chain.get_engine().get_parameters().clone().split_off(3)
+        parameters = chain.get_engine().get_parameters()[3..].to_vec()
     });
 
-    LfoLayout::new(parameters, display_area).draw(display)?;
+    LfoLayout::new(&parameters, display_area).draw(display)?;
 
     Ok(())
 }
@@ -60,10 +60,10 @@ pub async fn render_engine_envelope(
     chain.lock(|c: &RefCell<Chain>| {
         let mut chain = c.borrow_mut();
 
-        parameters = chain.get_engine().get_envelope_parameters();
+        parameters = chain.get_engine().get_envelope_parameters().to_vec();
     });
 
-    EnvelopeLayout::new(parameters, display_area).draw(display)?;
+    EnvelopeLayout::new(&parameters, display_area).draw(display)?;
 
     Ok(())
 }

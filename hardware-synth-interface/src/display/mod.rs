@@ -1,6 +1,7 @@
 use alloc::{collections::VecDeque, string::String};
 use core::cell::RefCell;
 use embassy_stm32::i2c::I2c;
+use embassy_time::Timer;
 use embassy_sync::{
     blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex},
     channel::Channel,
@@ -54,7 +55,7 @@ pub async fn display_handler(mut display: Display, chain: &'static SharedChain) 
     let mut mode_rx = MODE.receiver().unwrap();
 
     loop {
-        let content = DISPLAY_BUFFER.receive().await;
+        let _content = DISPLAY_BUFFER.receive().await;
         display.clear_buffer();
 
         let mode = mode_rx.get().await;
@@ -68,6 +69,11 @@ pub async fn display_handler(mut display: Display, chain: &'static SharedChain) 
             EffectsDetail => render_effects_detail(&mut display, chain).await.unwrap(),
         }
 
-        display.flush().unwrap();
+        // A dropped frame is not worth killing the synth over, and a NACK is
+        // worth one retry before giving up on the frame.
+        if display.flush().is_err() {
+            Timer::after_millis(2).await;
+            display.flush().ok();
+        }
     }
 }

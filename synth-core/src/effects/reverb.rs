@@ -83,14 +83,14 @@ impl Effect for Reverb {
         dry.sqrt() * sample + 1.5 * wet.sqrt() * ap_chain_result
     }
 
-    fn get_name(&self) -> &str {
+    fn get_name(&self) -> &'static str {
         "Reverb"
     }
 }
 
 impl UserParameters for Reverb {
-    fn get_parameters(&self) -> Vec<Parameter> {
-        self.parameters.clone()
+    fn get_parameters(&self) -> &[Parameter] {
+        &self.parameters
     }
 
     fn update_parameter(&mut self, index: usize, change: ParameterChange) -> Option<Parameter> {

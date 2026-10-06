@@ -1,4 +1,4 @@
-use alloc::{string::String, vec::Vec};
+use alloc::string::String;
 
 #[derive(Debug, Clone)]
 pub struct Parameter {
@@ -54,6 +54,6 @@ pub enum ParameterChange {
 }
 
 pub trait UserParameters {
-    fn get_parameters(&self) -> Vec<Parameter>;
+    fn get_parameters(&self) -> &[Parameter];
     fn update_parameter(&mut self, index: usize, change: ParameterChange) -> Option<Parameter>;
 }

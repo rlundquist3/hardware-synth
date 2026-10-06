@@ -4,7 +4,7 @@ use heapless::Vec;
 use crate::{
     buffer_pool::{self, BufferPool},
     effects::{
-        EFFECT_COUNT, Effect,
+        EFFECT_COUNT, Effect, EffectSnapshot,
         chorus::Chorus,
         echo::Echo,
         filters::{FILTER_COUNT, band_pass, high_pass, low_pass},
@@ -60,8 +60,22 @@ impl Chain {
         &mut self.filters
     }
 
+    pub fn get_filters_snapshot(&self) -> Vec<EffectSnapshot, FILTER_COUNT> {
+        self.filters
+            .iter()
+            .map(|f| EffectSnapshot::from_effect(f.as_ref()))
+            .collect()
+    }
+
     pub fn get_effects(&mut self) -> &mut Vec<Box<dyn Effect>, EFFECT_COUNT> {
         &mut self.effects
+    }
+
+    pub fn get_effects_snapshot(&self) -> Vec<EffectSnapshot, EFFECT_COUNT> {
+        self.effects
+            .iter()
+            .map(|e| EffectSnapshot::from_effect(e.as_ref()))
+            .collect()
     }
 }
 

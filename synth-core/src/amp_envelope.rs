@@ -110,8 +110,8 @@ impl Iterator for AmpEnvelope {
 }
 
 impl UserParameters for AmpEnvelope {
-    fn get_parameters(&self) -> Vec<Parameter> {
-        self.parameters.clone()
+    fn get_parameters(&self) -> &[Parameter] {
+        &self.parameters
     }
 
     fn update_parameter(&mut self, index: usize, change: ParameterChange) -> Option<Parameter> {

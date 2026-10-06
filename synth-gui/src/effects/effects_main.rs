@@ -1,4 +1,3 @@
-use alloc::boxed::Box;
 use embedded_graphics::{
     Drawable,
     draw_target::DrawTarget,
@@ -15,7 +14,7 @@ use embedded_layout::{
     view_group::Views,
 };
 use heapless::Vec;
-use synth_core::effects::{EFFECT_COUNT, Effect};
+use synth_core::effects::{EFFECT_COUNT, EffectSnapshot};
 
 use crate::{
     footer::FooterMenu,
@@ -29,15 +28,15 @@ pub const EFFECT_CHUNK_COUNT: usize = EFFECT_COUNT / EFFECT_CHUNK_SIZE
         _ => 1,
     };
 
-pub struct EffectsMainLayout<'a> {
-    effects: &'a mut heapless::Vec<Box<dyn Effect>, EFFECT_COUNT>,
+pub struct EffectsMainLayout {
+    effects: Vec<EffectSnapshot, EFFECT_COUNT>,
     display_area: Rectangle,
     navigation_location: usize,
 }
 
-impl<'a> EffectsMainLayout<'a> {
+impl EffectsMainLayout {
     pub fn new(
-        effects: &'a mut heapless::Vec<Box<dyn Effect>, EFFECT_COUNT>,
+        effects: Vec<EffectSnapshot, EFFECT_COUNT>,
         display_area: Rectangle,
         navigation_location: usize,
     ) -> Self {
@@ -49,7 +48,7 @@ impl<'a> EffectsMainLayout<'a> {
     }
 }
 
-impl<'a> Drawable for EffectsMainLayout<'a> {
+impl Drawable for EffectsMainLayout {
     type Color = BinaryColor;
     type Output = ();
 
@@ -63,9 +62,7 @@ impl<'a> Drawable for EffectsMainLayout<'a> {
             .effects
             .iter()
             .enumerate()
-            .map(|(i, e)| {
-                EffectItem::new(e.get_name(), self.navigation_location == i + 1, e.is_on())
-            })
+            .map(|(i, e)| EffectItem::new(e.name, self.navigation_location == i + 1, e.on))
             .collect();
 
         let mut column_layouts: Vec<_, EFFECT_CHUNK_COUNT> = items

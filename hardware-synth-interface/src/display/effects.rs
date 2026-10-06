@@ -1,6 +1,7 @@
 use core::cell::RefCell;
 
 use embedded_graphics::{Drawable, geometry::Dimensions};
+use heapless::Vec;
 use synth_core::chain::Chain;
 use synth_gui::effects::{effects_detail::EffectsDetailLayout, effects_main::EffectsMainLayout};
 
@@ -19,11 +20,9 @@ pub async fn render_effects_main(
 
     let display_area = display.bounding_box();
 
-    chain.lock(|c: &RefCell<Chain>| {
-        let mut chain = c.borrow_mut();
+    let effects_snapshot = chain.lock(|c: &RefCell<Chain>| c.borrow().get_effects_snapshot());
 
-        EffectsMainLayout::new(chain.get_effects(), display_area, navigation_location).draw(display)
-    })
+    EffectsMainLayout::new(effects_snapshot, display_area, navigation_location).draw(display)
 }
 
 pub async fn render_effects_detail(
@@ -35,10 +34,7 @@ pub async fn render_effects_detail(
 
     let display_area = display.bounding_box();
 
-    chain.lock(|c: &RefCell<Chain>| {
-        let mut chain = c.borrow_mut();
+    let effects_snapshot = chain.lock(|c: &RefCell<Chain>| c.borrow().get_effects_snapshot());
 
-        EffectsDetailLayout::new(chain.get_effects(), display_area, navigation_location)
-            .draw(display)
-    })
+    EffectsDetailLayout::new(effects_snapshot, display_area, navigation_location).draw(display)
 }

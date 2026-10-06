@@ -322,7 +322,7 @@ async fn effects_main_handler(chain: &'static SharedChain, control_event: Contro
                 return;
             }
             NavigationRight => {
-                if navigation_location < EFFECT_CHUNK_COUNT * EFFECT_CHUNK_SIZE {
+                if navigation_location + EFFECT_CHUNK_SIZE <= EFFECT_COUNT {
                     navigation_tx.send(navigation_location + EFFECT_CHUNK_SIZE);
                 }
                 return;

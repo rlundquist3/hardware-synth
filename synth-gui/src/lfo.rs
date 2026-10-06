@@ -25,7 +25,7 @@ pub struct LfoLayout {
 }
 
 impl LfoLayout {
-    pub fn new(parameters: Vec<Parameter>, display_area: Rectangle) -> Self {
+    pub fn new(parameters: &[Parameter], display_area: Rectangle) -> Self {
         LfoLayout {
             amp: parameters[0].get_value(),
             freq: parameters[1].get_value(),

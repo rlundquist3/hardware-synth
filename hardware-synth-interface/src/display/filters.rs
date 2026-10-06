@@ -19,11 +19,9 @@ pub async fn render_filters_main(
 
     let display_area = display.bounding_box();
 
-    chain.lock(|c: &RefCell<Chain>| {
-        let mut chain = c.borrow_mut();
+    let filters_snapshot = chain.lock(|c: &RefCell<Chain>| c.borrow().get_filters_snapshot());
 
-        FiltersMainLayout::new(chain.get_filters(), display_area, navigation_location).draw(display)
-    })
+    FiltersMainLayout::new(filters_snapshot, display_area, navigation_location).draw(display)
 }
 
 pub async fn render_filters_detail(
@@ -35,10 +33,7 @@ pub async fn render_filters_detail(
 
     let display_area = display.bounding_box();
 
-    chain.lock(|c: &RefCell<Chain>| {
-        let mut chain = c.borrow_mut();
+    let filters_snapshot = chain.lock(|c: &RefCell<Chain>| c.borrow().get_filters_snapshot());
 
-        FiltersDetailLayout::new(chain.get_filters(), display_area, navigation_location)
-            .draw(display)
-    })
+    FiltersDetailLayout::new(filters_snapshot, display_area, navigation_location).draw(display)
 }

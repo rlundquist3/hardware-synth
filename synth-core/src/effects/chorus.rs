@@ -150,14 +150,14 @@ impl Effect for Chorus {
         result
     }
 
-    fn get_name(&self) -> &str {
+    fn get_name(&self) -> &'static str {
         "Chorus"
     }
 }
 
 impl UserParameters for Chorus {
-    fn get_parameters(&self) -> Vec<Parameter> {
-        self.parameters.clone()
+    fn get_parameters(&self) -> &[Parameter] {
+        &self.parameters
     }
 
     fn update_parameter(&mut self, index: usize, change: ParameterChange) -> Option<Parameter> {
