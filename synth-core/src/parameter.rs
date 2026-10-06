@@ -6,7 +6,7 @@ pub struct Parameter {
     pub value: f32,
     pub delta: f32,
     pub range: (f32, f32),
-    render: fn(f32) -> String,
+    render: fn(f32) -> String, // TODO: can probably get rid of render
 }
 
 impl Parameter {

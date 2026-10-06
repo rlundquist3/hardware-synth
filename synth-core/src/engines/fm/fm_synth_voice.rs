@@ -2,7 +2,7 @@ use crate::{
     amp_envelope::AmpEnvelope,
     engines::fm::FreqRatio,
     midi::get_linear_bent_freq,
-    oscillator::{Oscillator, Waveform::Sine},
+    oscillator::{Oscillator, Waveform, sample_for_phase},
     voices::Voice,
 };
 use alloc::sync::Arc;
@@ -27,7 +27,7 @@ pub struct FMSynthVoice {
 
 impl FMSynthVoice {
     pub fn new(envelope: AmpEnvelope) -> Self {
-        let mut lfo = Oscillator::new(Sine);
+        let mut lfo = Oscillator::new(Waveform::Sine);
         lfo.set_freq(0.0);
 
         FMSynthVoice {
@@ -36,13 +36,21 @@ impl FMSynthVoice {
             freq_ratio: FreqRatio(1.0, 1.0),
             mod_index: PI,
             carrier_amp: 1.0,
-            carrier_osc: Oscillator::new(Sine),
-            mod_osc: Oscillator::new(Sine),
+            carrier_osc: Oscillator::new(Waveform::Sine),
+            mod_osc: Oscillator::new(Waveform::Sine),
             lfo_amp: 0.0,
             lfo,
             envelope,
             on: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    pub fn set_carrier_waveform(&mut self, waveform: Waveform) {
+        self.carrier_osc.set_waveform(waveform);
+    }
+
+    pub fn set_mod_waveform(&mut self, waveform: Waveform) {
+        self.mod_osc.set_waveform(waveform);
     }
 
     /// set frequency of carrier and modulation oscillators based on
@@ -129,18 +137,26 @@ impl Iterator for FMSynthVoice {
     type Item = f32;
 
     fn next(&mut self) -> Option<f32> {
-        let lfo_sample = self.lfo.next_sample();
-
-        let c = self
-            .carrier_osc
-            .next_phase_with_mod(self.lfo_amp * lfo_sample);
-        let m = self.mod_osc.next_phase();
-
         let envelope_amp = match self.envelope.next() {
             Some(amp) => amp,
             None => 1.0,
         };
 
-        Some(envelope_amp * self.carrier_amp * (c + self.mod_index * m.sin()).sin())
+        let lfo_sample = self.lfo.next_sample();
+        let c_phase = self
+            .carrier_osc
+            .next_phase_with_mod(self.lfo_amp * lfo_sample);
+        let m_sample = self.mod_osc.next_sample();
+
+        Some(
+            (envelope_amp
+                * self.carrier_amp
+                * sample_for_phase(
+                    self.carrier_osc.waveform,
+                    c_phase + self.mod_index * m_sample,
+                    self.carrier_osc.phase_delta,
+                ))
+            .clamp(-1.0, 1.0),
+        )
     }
 }

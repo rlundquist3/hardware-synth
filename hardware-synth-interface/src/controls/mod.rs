@@ -81,12 +81,12 @@ pub async fn control_handler(chain: &'static SharedChain) {
         let mode = mode_rx.get().await;
         match mode {
             Mode::EngineMain => engine_main_handler(chain, control_event).await,
-            Mode::EngineEnvelope => {}
-            Mode::EngineLFO => {}
-            Mode::FiltersMain => {}
-            Mode::FiltersDetail => {}
-            Mode::EffectsMain => {}
-            Mode::EffectsDetail => {}
+            Mode::EngineLFO => engine_lfo_handler(chain, control_event).await,
+            Mode::EngineEnvelope => engine_envelope_handler(chain, control_event).await,
+            Mode::FiltersMain => filters_main_handler(chain, control_event).await,
+            Mode::FiltersDetail => filters_detail_handler(chain, control_event).await,
+            Mode::EffectsMain => effects_main_handler(chain, control_event).await,
+            Mode::EffectsDetail => effects_detail_handler(chain, control_event).await,
         }
         DISPLAY_BUFFER.send(2).await;
     }
@@ -109,6 +109,8 @@ async fn engine_main_handler(chain: &'static SharedChain, control_event: Control
         Encoder2Counterclockwise => Some((1, Decrement)),
         Encoder3Clockwise => Some((2, Increment)),
         Encoder3Counterclockwise => Some((2, Decrement)),
+        Encoder4Clockwise => Some((3, Increment)),
+        Encoder4Counterclockwise => Some((3, Decrement)),
         _ => None,
     } {
         chain.lock(|c: &RefCell<Chain>| {
@@ -134,10 +136,10 @@ async fn engine_lfo_handler(chain: &'static SharedChain, control_event: ControlE
     }
 
     if let Some((param_index, change)) = match control_event {
-        Encoder1Clockwise => Some((3, Increment)),
-        Encoder1Counterclockwise => Some((3, Decrement)),
-        Encoder2Clockwise => Some((4, Increment)),
-        Encoder2Counterclockwise => Some((4, Decrement)),
+        Encoder1Clockwise => Some((4, Increment)),
+        Encoder1Counterclockwise => Some((4, Decrement)),
+        Encoder2Clockwise => Some((5, Increment)),
+        Encoder2Counterclockwise => Some((5, Decrement)),
         _ => None,
     } {
         chain.lock(|c: &RefCell<Chain>| {
@@ -163,14 +165,14 @@ async fn engine_envelope_handler(chain: &'static SharedChain, control_event: Con
     }
 
     if let Some((param_index, change)) = match control_event {
-        Encoder1Clockwise => Some((5, Increment)),
-        Encoder1Counterclockwise => Some((5, Decrement)),
-        Encoder2Clockwise => Some((6, Increment)),
-        Encoder2Counterclockwise => Some((6, Decrement)),
-        Encoder3Clockwise => Some((7, Increment)),
-        Encoder3Counterclockwise => Some((7, Decrement)),
-        Encoder4Clockwise => Some((8, Decrement)),
-        Encoder4Counterclockwise => Some((8, Increment)),
+        Encoder1Clockwise => Some((6, Increment)),
+        Encoder1Counterclockwise => Some((6, Decrement)),
+        Encoder2Clockwise => Some((7, Increment)),
+        Encoder2Counterclockwise => Some((7, Decrement)),
+        Encoder3Clockwise => Some((8, Increment)),
+        Encoder3Counterclockwise => Some((8, Decrement)),
+        Encoder4Clockwise => Some((9, Decrement)),
+        Encoder4Counterclockwise => Some((9, Increment)),
         _ => None,
     } {
         chain.lock(|c: &RefCell<Chain>| {

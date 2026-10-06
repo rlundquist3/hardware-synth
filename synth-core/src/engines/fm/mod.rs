@@ -6,6 +6,7 @@ use core::sync::atomic::Ordering;
 use crate::effects::gain::Gain;
 use crate::engines::Engine;
 use crate::midi::MIDI_NOTE_FREQS;
+use crate::oscillator::Waveform;
 use crate::parameter::ParameterChange::{self, Decrement, Increment};
 use crate::parameter::UserParameters;
 use crate::utils::{LFO_AMP_RANGE, LFO_FREQ_RANGE};
@@ -45,6 +46,16 @@ impl FMSynth {
         FMSynth {
             voices,
             parameters: vec![
+                // TODO: separate waveform params for carrier/modulator
+                Parameter::new("Wave", 1.0, 1.0, (1.0, 3.0), |v| {
+                    let name = match v {
+                        1.0 => "Sine",
+                        2.0 => "Sawtooth",
+                        3.0 => "Square",
+                        _ => "",
+                    };
+                    format!("{name}")
+                }),
                 Parameter::new("C", 1.0, 1.0, (1.0, 10.0), |v| format!("{:.0}", v)),
                 Parameter::new("M", 1.0, 1.0, (1.0, 10.0), |v| format!("{:.0}", v)),
                 Parameter::new(
@@ -156,20 +167,33 @@ impl UserParameters for FMSynth {
 
         match index {
             0 => {
+                let waveform = match updated_value {
+                    1.0 => Waveform::Sine,
+                    2.0 => Waveform::Sawtooth,
+                    3.0 => Waveform::Square,
+                    _ => Waveform::Sine,
+                };
                 self.voices.voices.iter_mut().for_each(|voice| {
-                    let existing = voice.get_freq_ratio();
-                    voice.set_freq_ratio(FreqRatio(updated_value, existing.1))
+                    voice.set_carrier_waveform(waveform.clone());
+                    voice.set_mod_waveform(waveform.clone());
                 });
                 Some(param.clone())
             }
             1 => {
                 self.voices.voices.iter_mut().for_each(|voice| {
                     let existing = voice.get_freq_ratio();
-                    voice.set_freq_ratio(FreqRatio(existing.0, updated_value))
+                    voice.set_freq_ratio(FreqRatio(updated_value, existing.1))
                 });
                 Some(param.clone())
             }
             2 => {
+                self.voices.voices.iter_mut().for_each(|voice| {
+                    let existing = voice.get_freq_ratio();
+                    voice.set_freq_ratio(FreqRatio(existing.0, updated_value))
+                });
+                Some(param.clone())
+            }
+            3 => {
                 let mod_index = MOD_INDEX_OPTIONS[updated_value as usize];
                 self.voices
                     .voices
@@ -177,14 +201,14 @@ impl UserParameters for FMSynth {
                     .for_each(|voice| voice.set_mod_index(mod_index));
                 Some(param.clone())
             }
-            3 => {
+            4 => {
                 self.voices
                     .voices
                     .iter_mut()
                     .for_each(|voice| voice.set_lfo_amp(updated_value));
                 Some(param.clone())
             }
-            4 => {
+            5 => {
                 self.voices
                     .voices
                     .iter_mut()

@@ -42,7 +42,7 @@ pub async fn render_engine_lfo(
     chain.lock(|c: &RefCell<Chain>| {
         let mut chain = c.borrow_mut();
 
-        parameters = chain.get_engine().get_parameters()[3..].to_vec()
+        parameters = chain.get_engine().get_parameters()[4..].to_vec()
     });
 
     LfoLayout::new(&parameters, display_area).draw(display)?;
