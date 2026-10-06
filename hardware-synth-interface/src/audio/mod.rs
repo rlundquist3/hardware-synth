@@ -10,8 +10,6 @@ pub async fn audio_handler(
     mut interface: Interface<'static, Running>,
     chain: &'static SharedChain,
 ) {
-    // A SAI overrun is recoverable -- a transient on the first block at startup,
-    // for instance -- so restart the callback rather than taking the synth down.
     loop {
         let _ = interface
             .start_callback(|_input, output| {

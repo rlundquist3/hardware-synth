@@ -1,11 +1,11 @@
 use alloc::{collections::VecDeque, string::String};
 use core::cell::RefCell;
 use embassy_stm32::i2c::I2c;
-use embassy_time::Timer;
 use embassy_sync::{
     blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex},
     channel::Channel,
 };
+use embassy_time::Timer;
 use embedded_graphics::{
     mono_font::{MonoTextStyle, ascii::FONT_6X10},
     pixelcolor::BinaryColor,
@@ -42,13 +42,7 @@ pub type Display = Ssd1306<
 >;
 pub type DisplayError = <Display as DrawTarget>::Error;
 
-pub struct DisplayContent {
-    // pub text: String,
-}
-
 pub static DISPLAY_BUFFER: Channel<CriticalSectionRawMutex, u32, 16> = Channel::new();
-
-const TEXT_STYLE: MonoTextStyle<'_, BinaryColor> = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
 
 #[embassy_executor::task]
 pub async fn display_handler(mut display: Display, chain: &'static SharedChain) {
@@ -69,8 +63,6 @@ pub async fn display_handler(mut display: Display, chain: &'static SharedChain) 
             EffectsDetail => render_effects_detail(&mut display, chain).await.unwrap(),
         }
 
-        // A dropped frame is not worth killing the synth over, and a NACK is
-        // worth one retry before giving up on the frame.
         if display.flush().is_err() {
             Timer::after_millis(2).await;
             display.flush().ok();

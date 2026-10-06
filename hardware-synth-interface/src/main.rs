@@ -44,7 +44,7 @@ use crate::{
     midi::{BOARD_TUH_RHPORT, initialize_midi_host, tasks::midi_heartbeat, usb_host_task},
 };
 use crate::{
-    display::{DISPLAY_BUFFER, DisplayContent, display_handler},
+    display::{DISPLAY_BUFFER, display_handler},
     midi::tasks::midi_buffer_handler,
 };
 use logger::{log_handler, serial_log};
