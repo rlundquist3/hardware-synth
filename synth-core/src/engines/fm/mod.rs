@@ -23,9 +23,6 @@ const VOICE_COUNT: usize = 5;
 #[derive(Clone, Copy, Debug)]
 pub struct FreqRatio(pub f32, pub f32);
 
-pub const MOD_INDEX_OPTIONS: &[f32] = &[1.0, 2.0, PI, 4.0, 5.0, 2.0 * PI];
-pub const MOD_INDEX_RENDER: &[&str] = &["1", "2", "pi", "4", "5", "2 pi"];
-
 #[derive(Debug)]
 pub struct FMSynth {
     pub voices: Voices<FMSynthVoice>,
@@ -58,13 +55,7 @@ impl FMSynth {
                 }),
                 Parameter::new("C", 1.0, 1.0, (1.0, 10.0), |v| format!("{:.0}", v)),
                 Parameter::new("M", 1.0, 1.0, (1.0, 10.0), |v| format!("{:.0}", v)),
-                Parameter::new(
-                    "Mod Idx",
-                    2.0,
-                    1.0,
-                    (0.0, (MOD_INDEX_OPTIONS.len() - 1) as f32),
-                    |v| format!("{}", MOD_INDEX_RENDER[v as usize]),
-                ),
+                Parameter::new("Mod Idx", 1.0, 1.0, (1.0, 6.0), |v| format!("{:.0}", v)),
                 Parameter::new("LFO Amp", 0.0, 0.025, LFO_AMP_RANGE, |v| {
                     format!("{:.3}", v)
                 }),
@@ -194,11 +185,10 @@ impl UserParameters for FMSynth {
                 Some(param.clone())
             }
             3 => {
-                let mod_index = MOD_INDEX_OPTIONS[updated_value as usize];
                 self.voices
                     .voices
                     .iter_mut()
-                    .for_each(|voice| voice.set_mod_index(mod_index));
+                    .for_each(|voice| voice.set_mod_index(updated_value));
                 Some(param.clone())
             }
             4 => {

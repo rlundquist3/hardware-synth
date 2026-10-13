@@ -55,7 +55,7 @@ impl FMSynthVoice {
 
     /// set frequency of carrier and modulation oscillators based on
     /// fundamental frequency and frequency ratio
-    /// for modulation index I = C/M:
+    /// for frequency ratio C:M:
     ///     carrier freq = C * fund freq
     ///     mod freq = M * fund freq
     pub fn set_osc_freqs(&mut self, freq: f32) {

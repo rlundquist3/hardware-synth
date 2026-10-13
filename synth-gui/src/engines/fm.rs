@@ -11,7 +11,7 @@ use embedded_layout::{
     prelude::*,
 };
 use heapless::String;
-use synth_core::{engines::fm::MOD_INDEX_RENDER, parameter::Parameter};
+use synth_core::parameter::Parameter;
 
 use crate::{footer::FooterMenu, shared::SMALL_TEXT_STYLE};
 
@@ -19,7 +19,7 @@ pub struct EngineMainLayout {
     waveform: String<8>,
     c: String<8>,
     m: String<8>,
-    i: &'static str,
+    i: String<8>,
     display_area: Rectangle,
 }
 
@@ -28,6 +28,7 @@ impl EngineMainLayout {
         let mut waveform: String<8> = String::new();
         let mut c: String<8> = String::new();
         let mut m: String<8> = String::new();
+        let mut i: String<8> = String::new();
         write!(
             waveform,
             "{}",
@@ -41,12 +42,13 @@ impl EngineMainLayout {
         .unwrap();
         write!(c, "{:.0}", parameters[1].get_value()).unwrap();
         write!(m, "{:.0}", parameters[2].get_value()).unwrap();
+        write!(i, "{:.0}", parameters[3].get_value()).unwrap();
 
         EngineMainLayout {
             waveform,
             c,
             m,
-            i: MOD_INDEX_RENDER[parameters[3].get_value() as usize],
+            i,
             display_area,
         }
     }
@@ -68,7 +70,7 @@ impl Drawable for EngineMainLayout {
         let m_text = Text::new(&self.m, Point::zero(), ratio_text_style);
         let ratio_line = Line::new(Point { x: 0, y: 0 }, Point { x: 24, y: 0 })
             .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 2));
-        let i_text = Text::new(self.i, Point::zero(), ratio_text_style);
+        let i_text = Text::new(&self.i, Point::zero(), ratio_text_style);
 
         let ratio = LinearLayout::vertical(Chain::new(c_text).append(ratio_line).append(m_text))
             .with_alignment(horizontal::Center)

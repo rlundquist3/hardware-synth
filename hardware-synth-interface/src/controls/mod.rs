@@ -183,7 +183,7 @@ async fn engine_envelope_handler(chain: &'static SharedChain, control_event: Con
     };
 }
 
-async fn filters_main_handler(chain: &'static SharedChain, control_event: ControlEvent) {
+async fn filters_main_handler(_chain: &'static SharedChain, control_event: ControlEvent) {
     let mode_tx = MODE.sender();
     let navigation_tx = NAVIGATION_LOCATION.sender();
     let mut navigation_rx = NAVIGATION_LOCATION.receiver().unwrap();
@@ -281,7 +281,7 @@ async fn filters_detail_handler(chain: &'static SharedChain, control_event: Cont
     };
 }
 
-async fn effects_main_handler(chain: &'static SharedChain, control_event: ControlEvent) {
+async fn effects_main_handler(_chain: &'static SharedChain, control_event: ControlEvent) {
     let mode_tx = MODE.sender();
     let navigation_tx = NAVIGATION_LOCATION.sender();
     let mut navigation_rx = NAVIGATION_LOCATION.receiver().unwrap();
