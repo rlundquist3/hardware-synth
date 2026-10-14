@@ -1,5 +1,5 @@
 use alloc::vec;
-use alloc::{format, vec::Vec};
+use alloc::vec::Vec;
 
 use crate::{
     effects::Effect,
@@ -40,10 +40,8 @@ impl Biquad {
             on: false,
             name,
             parameters: vec![
-                Parameter::new("Cutoff", cutoff_freq, 10.0, cutoff_freq_range, |v| {
-                    format!("{:.0}Hz", v)
-                }),
-                Parameter::new("Q", q, 0.1, Q_RANGE, |v| format!("{:.1}", v)),
+                Parameter::new("Cutoff", cutoff_freq, 10.0, cutoff_freq_range),
+                Parameter::new("Q", q, 0.1, Q_RANGE),
             ],
             a,
             b,

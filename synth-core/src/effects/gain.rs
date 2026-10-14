@@ -1,5 +1,5 @@
 use alloc::vec;
-use alloc::{format, vec::Vec};
+use alloc::vec::Vec;
 
 use crate::{
     effects::Effect,
@@ -25,9 +25,7 @@ impl Gain {
             on: false,
             gain_db,
             gain_linear: db_to_linear_gain(gain_db),
-            parameters: vec![Parameter::new("Gain", gain_db, 0.5, (-16.0, 12.0), |v| {
-                format!("{:.1}dB", v)
-            })],
+            parameters: vec![Parameter::new("Gain", gain_db, 0.5, (-16.0, 12.0))],
         }
     }
 }

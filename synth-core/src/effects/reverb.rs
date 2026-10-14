@@ -1,5 +1,5 @@
 use alloc::vec;
-use alloc::{format, vec::Vec};
+use alloc::vec::Vec;
 use micromath::F32Ext;
 
 use crate::buffer_pool::BufferPool;
@@ -48,9 +48,7 @@ impl Reverb {
                 new_ap(0.5, 441, buffer_pool),
                 new_ap(0.5, 341, buffer_pool),
             ],
-            parameters: vec![Parameter::new("Dry/Wet", 0.5, 0.05, (0.0, 1.0), |v| {
-                format!("{:.2}/{:.2}", 1.0 - v, v)
-            })],
+            parameters: vec![Parameter::new("Dry/Wet", 0.5, 0.05, (0.0, 1.0))],
         }
     }
 }

@@ -1,7 +1,7 @@
 use core::ops::Range;
 
 use alloc::vec;
-use alloc::{format, vec::Vec};
+use alloc::vec::Vec;
 
 use rand_xoshiro::{
     Xoroshiro128Plus,
@@ -42,9 +42,7 @@ pub struct Chorus {
 
 impl Chorus {
     pub fn new(buffer_pool: &mut BufferPool) -> Self {
-        let parameters = vec![Parameter::new("Dry/Wet", 0.3, 0.05, (0.0, 0.5), |v| {
-            format!("{:.2}/{:.2}", 1.0 - v, v)
-        })];
+        let parameters = vec![Parameter::new("Dry/Wet", 0.3, 0.05, (0.0, 0.5))];
 
         let mut voice_parameters = Vec::new();
         let mut voices = Vec::new();
@@ -57,17 +55,9 @@ impl Chorus {
             let a = random_range(&mut rand_rng, AMP_RANGE);
             let f = random_range(&mut rand_rng, FREQ_RANGE);
 
-            let delay_param =
-                Parameter::new("Delay", d, 1.0, (DELAY_RANGE.start, DELAY_RANGE.end), |v| {
-                    format!("{:.0}ms", v)
-                });
-            let amp_param = Parameter::new("Amp", a, 0.05, (AMP_RANGE.start, AMP_RANGE.end), |v| {
-                format!("{:.2}", v)
-            });
-            let freq_param =
-                Parameter::new("Freq", f, 0.1, (FREQ_RANGE.start, FREQ_RANGE.end), |v| {
-                    format!("{:.1}Hz", v)
-                });
+            let delay_param = Parameter::new("Delay", d, 1.0, (DELAY_RANGE.start, DELAY_RANGE.end));
+            let amp_param = Parameter::new("Amp", a, 0.05, (AMP_RANGE.start, AMP_RANGE.end));
+            let freq_param = Parameter::new("Freq", f, 0.1, (FREQ_RANGE.start, FREQ_RANGE.end));
 
             voice_parameters.push(delay_param.clone());
             voice_parameters.push(amp_param.clone());

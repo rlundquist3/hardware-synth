@@ -7,7 +7,6 @@ use crate::{
 };
 use alloc::sync::Arc;
 use core::{f32::consts::PI, sync::atomic::AtomicBool};
-use micromath::F32Ext;
 
 #[derive(Debug)]
 pub struct FMSynthVoice {
@@ -15,7 +14,6 @@ pub struct FMSynthVoice {
     midi_note: usize,
     freq_ratio: FreqRatio,
     mod_index: f32,
-    carrier_amp: f32,
     carrier_osc: Oscillator,
     mod_osc: Oscillator,
     lfo_amp: f32,
@@ -35,7 +33,6 @@ impl FMSynthVoice {
             midi_note: 0,
             freq_ratio: FreqRatio(1.0, 1.0),
             mod_index: PI,
-            carrier_amp: 1.0,
             carrier_osc: Oscillator::new(Waveform::Sine),
             mod_osc: Oscillator::new(Waveform::Sine),
             lfo_amp: 0.0,
@@ -113,7 +110,6 @@ impl Clone for FMSynthVoice {
             midi_note: self.midi_note,
             freq_ratio: self.freq_ratio,
             mod_index: self.mod_index,
-            carrier_amp: self.carrier_amp,
             carrier_osc: self.carrier_osc.clone(),
             mod_osc: self.mod_osc.clone(),
             lfo_amp: self.lfo_amp,
@@ -150,7 +146,6 @@ impl Iterator for FMSynthVoice {
 
         Some(
             (envelope_amp
-                * self.carrier_amp
                 * sample_for_phase(
                     self.carrier_osc.waveform,
                     c_phase + self.mod_index * m_sample,

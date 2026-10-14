@@ -1,5 +1,5 @@
+use alloc::vec;
 use alloc::vec::Vec;
-use alloc::{format, vec};
 
 use crate::{
     SAMPLE_RATE,
@@ -49,12 +49,10 @@ impl AmpEnvelope {
             releasing: false,
             release_complete: true,
             parameters: vec![
-                Parameter::new("Attack", attack, 0.1, (0.0, 2.0), |v| format!("{:.1}s", v)),
-                Parameter::new("Decay", decay, 0.1, (0.0, 2.0), |v| format!("{:.1}s", v)),
-                Parameter::new("Sustain", sustain, 0.1, (0.0, 1.0), |v| format!("{:.1}", v)),
-                Parameter::new("Release", release, 0.1, (0.0, 2.0), |v| {
-                    format!("{:.1}s", v)
-                }),
+                Parameter::new("Attack", attack, 0.1, (0.0, 2.0)),
+                Parameter::new("Decay", decay, 0.1, (0.0, 2.0)),
+                Parameter::new("Sustain", sustain, 0.1, (0.0, 1.0)),
+                Parameter::new("Release", release, 0.1, (0.0, 2.0)),
             ],
         }
     }
@@ -62,6 +60,7 @@ impl AmpEnvelope {
     pub fn set_releasing(&mut self) {
         self.elapsed_samples = 0;
         self.releasing = true;
+        self.release_step = self.amp / self.release_samples as f32;
     }
 
     pub fn get_releasing(&self) -> bool {
@@ -79,9 +78,12 @@ impl Iterator for AmpEnvelope {
     fn next(&mut self) -> Option<f32> {
         match self.releasing {
             false => {
+                self.release_complete = false;
+                if self.elapsed_samples == 0 && self.attack_samples == 0 {
+                    self.amp = 1.0;
+                }
                 if self.elapsed_samples < self.attack_samples {
                     // attack phase
-                    self.release_complete = false;
                     self.amp = self.amp + self.attack_step;
                 } else if self.elapsed_samples < self.attack_samples + self.decay_samples {
                     // decay phase

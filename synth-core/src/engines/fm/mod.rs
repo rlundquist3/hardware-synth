@@ -1,6 +1,5 @@
+use alloc::vec;
 use alloc::vec::Vec;
-use alloc::{format, vec};
-use core::f32::consts::PI;
 use core::sync::atomic::Ordering;
 
 use crate::effects::gain::Gain;
@@ -18,7 +17,7 @@ use crate::{
 
 pub mod fm_synth_voice;
 
-const VOICE_COUNT: usize = 5;
+const VOICE_COUNT: usize = 6;
 
 #[derive(Clone, Copy, Debug)]
 pub struct FreqRatio(pub f32, pub f32);
@@ -43,25 +42,12 @@ impl FMSynth {
         FMSynth {
             voices,
             parameters: vec![
-                // TODO: separate waveform params for carrier/modulator
-                Parameter::new("Wave", 1.0, 1.0, (1.0, 3.0), |v| {
-                    let name = match v {
-                        1.0 => "Sine",
-                        2.0 => "Sawtooth",
-                        3.0 => "Square",
-                        _ => "",
-                    };
-                    format!("{name}")
-                }),
-                Parameter::new("C", 1.0, 1.0, (1.0, 10.0), |v| format!("{:.0}", v)),
-                Parameter::new("M", 1.0, 1.0, (1.0, 10.0), |v| format!("{:.0}", v)),
-                Parameter::new("Mod Idx", 1.0, 1.0, (1.0, 6.0), |v| format!("{:.0}", v)),
-                Parameter::new("LFO Amp", 0.0, 0.025, LFO_AMP_RANGE, |v| {
-                    format!("{:.3}", v)
-                }),
-                Parameter::new("LFO Freq", 0.0, 0.25, LFO_FREQ_RANGE, |v| {
-                    format!("{:.2}Hz", v)
-                }),
+                Parameter::new("Wave", 1.0, 1.0, (1.0, 3.0)),
+                Parameter::new("C", 1.0, 1.0, (1.0, 10.0)),
+                Parameter::new("M", 1.0, 1.0, (1.0, 10.0)),
+                Parameter::new("Mod Idx", 1.0, 1.0, (1.0, 6.0)),
+                Parameter::new("LFO Amp", 0.0, 0.025, LFO_AMP_RANGE),
+                Parameter::new("LFO Freq", 0.0, 0.25, LFO_FREQ_RANGE),
             ],
             headroom_gain,
             envelope,
@@ -78,6 +64,7 @@ impl Engine for FMSynth {
 
     fn note_off(&mut self, note: u8) {
         if let Some(voice) = self.voices.voice_off(note) {
+            voice.set_releasing();
             voice.on.store(false, Ordering::Relaxed);
         }
     }
@@ -113,13 +100,7 @@ impl Iterator for Voices<FMSynthVoice> {
 
     fn next(&mut self) -> Option<f32> {
         Some(self.voices.iter_mut().fold(0.0, |acc: f32, voice| {
-            if voice.on.load(Ordering::Relaxed) {
-                acc + voice.next().unwrap_or(0.0)
-            } else if !voice.get_release_complete() {
-                if !voice.get_releasing() {
-                    voice.set_releasing();
-                }
-
+            if voice.on.load(Ordering::Relaxed) || !voice.get_release_complete() {
                 acc + voice.next().unwrap_or(0.0)
             } else {
                 acc
@@ -166,7 +147,6 @@ impl UserParameters for FMSynth {
                 };
                 self.voices.voices.iter_mut().for_each(|voice| {
                     voice.set_carrier_waveform(waveform.clone());
-                    voice.set_mod_waveform(waveform.clone());
                 });
                 Some(param.clone())
             }

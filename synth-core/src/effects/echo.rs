@@ -9,7 +9,7 @@ use crate::{
     },
 };
 use alloc::vec;
-use alloc::{format, vec::Vec};
+use alloc::vec::Vec;
 
 const MAX_DELAY_SECS: f32 = 1.0;
 
@@ -30,10 +30,8 @@ impl Echo {
             buffer: buffer_pool.take(max_samples),
             write_index: 0,
             parameters: vec![
-                Parameter::new("Delay", delay_secs, 0.1, (0.0, 1.0), |v| {
-                    format!("{:.1}s", v)
-                }),
-                Parameter::new("Amp", amp, 0.1, (0.0, 1.0), |v| format!("{:.1}", v)),
+                Parameter::new("Delay", delay_secs, 0.1, (0.0, 1.0)),
+                Parameter::new("Amp", amp, 0.1, (0.0, 1.0)),
             ],
         }
     }
