@@ -5,6 +5,7 @@ mod allocator;
 mod audio;
 mod controls;
 mod display;
+mod i2c;
 mod midi;
 mod panic;
 
@@ -17,19 +18,17 @@ use daisy_embassy::{
         self, bind_interrupts,
         exti::{self, ExtiInput},
         gpio::Pull,
-        interrupt, peripherals,
+        i2c::{Config, I2c},
+        interrupt,
+        interrupt::{InterruptExt, Priority},
+        peripherals, usart,
     },
     new_daisy_board,
     sdram::SDRAM_SIZE,
 };
 use defmt_serial as _;
+use embassy_embedded_hal::shared_bus::blocking::i2c::I2cDevice;
 use embassy_executor::{InterruptExecutor, Spawner};
-// TODO: clean up these imports - should be able to come from daisy_embassy::hal
-use embassy_stm32::{
-    i2c::{Config, I2c},
-    interrupt::{InterruptExt, Priority},
-    usart,
-};
 use embassy_sync::blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex};
 use embassy_time::Delay;
 use ssd1306::{I2CDisplayInterface, Ssd1306, prelude::*};
@@ -39,12 +38,15 @@ use crate::{
     audio::audio_handler,
     controls::{
         control_handler,
+        dpad::dpad_handler,
         encoders::{encoder_click_handler, encoder_handler},
     },
+    display::DISPLAY_ADDRESS,
+    i2c::I2C_BUS,
     midi::{BOARD_TUH_RHPORT, initialize_midi_host, tasks::midi_heartbeat, usb_host_task},
 };
 use crate::{
-    display::{DISPLAY_BUFFER, display_handler},
+    display::{DISPLAY_BUFFER, Display, display_handler},
     midi::tasks::midi_buffer_handler,
 };
 use logger::{log_handler, serial_log};
@@ -53,8 +55,13 @@ use synth_core::{buffer_pool::BufferPool, chain::Chain, engines::fm::FMSynth};
 
 bind_interrupts!(struct Irqs {
     USART1 => usart::InterruptHandler<peripherals::USART1>;
+    EXTI0 => exti::InterruptHandler<interrupt::typelevel::EXTI0>;
+    EXTI1 => exti::InterruptHandler<interrupt::typelevel::EXTI1>;
+    EXTI2 => exti::InterruptHandler<interrupt::typelevel::EXTI2>;
+    EXTI3 => exti::InterruptHandler<interrupt::typelevel::EXTI3>;
+    EXTI4 => exti::InterruptHandler<interrupt::typelevel::EXTI4>;
+    EXTI9_5 => exti::InterruptHandler<interrupt::typelevel::EXTI9_5>;
     EXTI15_10 => exti::InterruptHandler<interrupt::typelevel::EXTI15_10>;
-    EXTI9_5 => hal::exti::InterruptHandler<interrupt::typelevel::EXTI9_5>;
 });
 
 static AUDIO_EXECUTOR: InterruptExecutor = InterruptExecutor::new();
@@ -97,7 +104,7 @@ pub static CHAIN: StaticCell<BlockingMutex<CriticalSectionRawMutex, RefCell<Chai
  * | P0 | `USART3` | audio |
  * | P1 | `OTG_HS` | `tusb_int_handler` - queues events |
  * | P2 | `UART4` | `usb_host_task`, TinyUSB callbacks (MIDI events) |
- * | low |  | display, logger, everything else |
+ * | low |  | non-MIDI controls, display, logger, everything else |
  */
 #[embassy_executor::main]
 async fn main(low_priority_spawner: Spawner) {
@@ -155,27 +162,49 @@ async fn main(low_priority_spawner: Spawner) {
     midi_executor.spawn(usb_host_task().unwrap());
     // End MIDI setup
 
-    // Start control setup
-    let clk_0 = ExtiInput::new(board.pins.d1, peripherals.EXTI11, Pull::Up, Irqs);
-    let dt_0 = ExtiInput::new(board.pins.d2, peripherals.EXTI10, Pull::Up, Irqs);
-    let sw_0 = ExtiInput::new(board.pins.d3, peripherals.EXTI9, Pull::Up, Irqs);
-    low_priority_spawner.spawn(encoder_handler(1, clk_0, dt_0).unwrap());
-    low_priority_spawner.spawn(encoder_click_handler(1, sw_0).unwrap());
-    // End control setup
-
-    // Start display setup
+    // Start I2C setup (used for D-pad and display)
     let i2c = I2c::new_blocking(
         peripherals.I2C1,
         board.pins.d11,
         board.pins.d12,
-        Config::default(), // TODO: might want to make this slower
+        Config::default(),
     );
-    let display_interface = I2CDisplayInterface::new_custom_address(i2c, 0x3D);
-    let mut display: Ssd1306<
-        I2CInterface<I2c<'_, embassy_stm32::mode::Blocking, embassy_stm32::i2c::Master>>,
-        DisplaySize128x64,
-        ssd1306::mode::BufferedGraphicsMode<DisplaySize128x64>,
-    > = Ssd1306::new(
+    let i2c_bus = I2C_BUS.init(BlockingMutex::new(RefCell::new(i2c)));
+    let dpad_i2c = I2cDevice::new(i2c_bus);
+    let display_i2c = I2cDevice::new(i2c_bus);
+    // End I2C setup
+
+    // Start control setup
+    let clk_1 = ExtiInput::new(board.pins.d1, peripherals.EXTI11, Pull::Up, Irqs);
+    let dt_1 = ExtiInput::new(board.pins.d2, peripherals.EXTI10, Pull::Up, Irqs);
+    let sw_1 = ExtiInput::new(board.pins.d3, peripherals.EXTI9, Pull::Up, Irqs);
+    let clk_2 = ExtiInput::new(board.pins.d4, peripherals.EXTI8, Pull::Up, Irqs);
+    let dt_2 = ExtiInput::new(board.pins.d5, peripherals.EXTI2, Pull::Up, Irqs);
+    let sw_2 = ExtiInput::new(board.pins.d6, peripherals.EXTI12, Pull::Up, Irqs);
+    let clk_3 = ExtiInput::new(board.pins.d15, peripherals.EXTI0, Pull::Up, Irqs);
+    let dt_3 = ExtiInput::new(board.pins.d16, peripherals.EXTI3, Pull::Up, Irqs);
+    let sw_3 = ExtiInput::new(board.pins.d17, peripherals.EXTI1, Pull::Up, Irqs);
+    let clk_4 = ExtiInput::new(board.pins.d18, peripherals.EXTI7, Pull::Up, Irqs);
+    let dt_4 = ExtiInput::new(board.pins.d19, peripherals.EXTI6, Pull::Up, Irqs);
+    let sw_4 = ExtiInput::new(board.pins.d21, peripherals.EXTI4, Pull::Up, Irqs);
+
+    let dpad_interrupt = ExtiInput::new(board.pins.d10, peripherals.EXTI5, Pull::Up, Irqs);
+    low_priority_spawner.spawn(dpad_handler(dpad_interrupt, dpad_i2c).unwrap());
+
+    low_priority_spawner.spawn(encoder_handler(1, clk_1, dt_1).unwrap());
+    low_priority_spawner.spawn(encoder_click_handler(1, sw_1).unwrap());
+    low_priority_spawner.spawn(encoder_handler(2, clk_2, dt_2).unwrap());
+    low_priority_spawner.spawn(encoder_click_handler(2, sw_2).unwrap());
+    low_priority_spawner.spawn(encoder_handler(3, clk_3, dt_3).unwrap());
+    low_priority_spawner.spawn(encoder_click_handler(3, sw_3).unwrap());
+    low_priority_spawner.spawn(encoder_handler(4, clk_4, dt_4).unwrap());
+    low_priority_spawner.spawn(encoder_click_handler(4, sw_4).unwrap());
+    low_priority_spawner.spawn(control_handler(chain).unwrap());
+    // End control setup
+
+    // Start display setup
+    let display_interface = I2CDisplayInterface::new_custom_address(display_i2c, DISPLAY_ADDRESS);
+    let mut display: Display = Ssd1306::new(
         display_interface,
         DisplaySize128x64,
         DisplayRotation::Rotate0,
@@ -184,7 +213,6 @@ async fn main(low_priority_spawner: Spawner) {
     display.init().unwrap();
 
     low_priority_spawner.spawn(display_handler(display, chain).unwrap());
-    low_priority_spawner.spawn(control_handler(chain).unwrap());
     DISPLAY_BUFFER.send(1).await;
     serial_log("Display Initialized");
     // End display setup

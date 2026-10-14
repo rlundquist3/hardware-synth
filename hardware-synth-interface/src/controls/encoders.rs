@@ -28,7 +28,7 @@ enum EncoderEvent {
 
 const DELAY: Duration = Duration::from_millis(250);
 
-#[embassy_executor::task]
+#[embassy_executor::task(pool_size = 4)]
 pub async fn encoder_handler(
     encoder_index: usize,
     mut clk: ExtiInput<'static, Async>,
@@ -82,7 +82,7 @@ pub async fn encoder_handler(
     }
 }
 
-#[embassy_executor::task]
+#[embassy_executor::task(pool_size = 4)]
 pub async fn encoder_click_handler(encoder_index: usize, mut sw: ExtiInput<'static, Async>) {
     loop {
         sw.wait_for_low().await;

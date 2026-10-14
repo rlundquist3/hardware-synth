@@ -29,6 +29,7 @@ use crate::{
     display::DISPLAY_BUFFER,
 };
 
+pub mod dpad;
 pub mod encoders;
 
 #[derive(Clone, Debug)]
@@ -72,6 +73,9 @@ pub async fn control_handler(chain: &'static SharedChain) {
     let mut mode_rx = MODE.receiver().unwrap();
     let mut mode_tx = MODE.sender();
     mode_tx.send(Mode::EngineMain);
+
+    let navigation_tx = NAVIGATION_LOCATION.sender();
+    navigation_tx.send(0);
 
     let mut buffer_rx = CONTROL_BUFFER.receiver();
 

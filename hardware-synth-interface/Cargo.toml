@@ -14,6 +14,7 @@ cortex-m-rt = { version = "0.7.6", features = ["device", "set-vtor", "set-sp"] }
 daisy-embassy = { version = "0.3.0", features = ["seed3"] }
 defmt-serial = "0.14.0"
 emballoc = "0.3.0"
+embassy-embedded-hal = "0.6.0"
 embassy-executor = { version = "0.10.0", features = [
     "platform-cortex-m",
     "executor-thread",
@@ -38,6 +39,7 @@ embassy-time = { version = "0.5.1", features = [
     "generic-queue-8",
 ] }
 embedded-graphics = "0.8.2"
+embedded-hal = "1.0.0"
 heapless = "0.9.3"
 logger = { path = "../logger" }
 rust-tinyusb-host = { git = "https://github.com/rlundquist3/rust-tinyusb-host.git", rev = "2e15a2f" }

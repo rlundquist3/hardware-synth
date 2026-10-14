@@ -1,5 +1,6 @@
 use alloc::{collections::VecDeque, string::String};
 use core::cell::RefCell;
+use embassy_embedded_hal::shared_bus::blocking::i2c::I2cDevice;
 use embassy_stm32::i2c::I2c;
 use embassy_sync::{
     blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex},
@@ -29,14 +30,17 @@ use crate::{
         filters::{render_filters_detail, render_filters_main},
         fm::{render_engine_envelope, render_engine_lfo, render_engine_main},
     },
+    i2c::SharedI2c,
 };
 
 mod effects;
 mod filters;
 mod fm;
 
+pub const DISPLAY_ADDRESS: u8 = 0x3D;
+
 pub type Display = Ssd1306<
-    I2CInterface<I2c<'static, embassy_stm32::mode::Blocking, embassy_stm32::i2c::Master>>,
+    I2CInterface<SharedI2c>,
     DisplaySize128x64,
     ssd1306::mode::BufferedGraphicsMode<DisplaySize128x64>,
 >;
