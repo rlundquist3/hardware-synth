@@ -19,8 +19,8 @@ pub struct FMSynthVoice {
     lfo_amp: f32,
     lfo: Oscillator,
     pub envelope: AmpEnvelope,
-
     pub on: Arc<AtomicBool>,
+    last_sample: f32,
 }
 
 impl FMSynthVoice {
@@ -39,6 +39,7 @@ impl FMSynthVoice {
             lfo,
             envelope,
             on: Arc::new(AtomicBool::new(false)),
+            last_sample: 0.0,
         }
     }
 
@@ -116,6 +117,7 @@ impl Clone for FMSynthVoice {
             lfo: self.lfo.clone(),
             envelope: self.envelope.clone(),
             on: Arc::new(AtomicBool::new(false)),
+            last_sample: self.last_sample,
         }
     }
 }
@@ -144,14 +146,15 @@ impl Iterator for FMSynthVoice {
             .next_phase_with_mod(self.lfo_amp * lfo_sample);
         let m_sample = self.mod_osc.next_sample();
 
-        Some(
-            (envelope_amp
-                * sample_for_phase(
-                    self.carrier_osc.waveform,
-                    c_phase + self.mod_index * m_sample,
-                    self.carrier_osc.phase_delta,
-                ))
-            .clamp(-1.0, 1.0),
-        )
+        self.last_sample = (envelope_amp
+            * sample_for_phase(
+                self.carrier_osc.waveform,
+                c_phase + self.mod_index * m_sample,
+                self.carrier_osc.phase_delta,
+                self.last_sample,
+            ))
+        .clamp(-1.0, 1.0);
+
+        Some(self.last_sample)
     }
 }

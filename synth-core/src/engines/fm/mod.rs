@@ -42,7 +42,7 @@ impl FMSynth {
         FMSynth {
             voices,
             parameters: vec![
-                Parameter::new("Wave", 1.0, 1.0, (1.0, 3.0)),
+                Parameter::new("Wave", 1.0, 1.0, (1.0, 4.0)),
                 Parameter::new("C", 1.0, 1.0, (1.0, 10.0)),
                 Parameter::new("M", 1.0, 1.0, (1.0, 10.0)),
                 Parameter::new("Mod Idx", 1.0, 1.0, (1.0, 6.0)),
@@ -143,6 +143,7 @@ impl UserParameters for FMSynth {
                     1.0 => Waveform::Sine,
                     2.0 => Waveform::Sawtooth,
                     3.0 => Waveform::Square,
+                    4.0 => Waveform::Triangle,
                     _ => Waveform::Sine,
                 };
                 self.voices.voices.iter_mut().for_each(|voice| {

@@ -36,6 +36,7 @@ impl EngineMainLayout {
                 1.0 => "Sine",
                 2.0 => "Saw",
                 3.0 => "Sqr",
+                4.0 => "Tri",
                 _ => "",
             }
         )

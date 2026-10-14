@@ -8,6 +8,7 @@ pub enum Waveform {
     Sine,
     Sawtooth,
     Square,
+    Triangle,
 }
 pub use self::Waveform::*;
 
@@ -21,6 +22,7 @@ pub struct Oscillator {
     pub freq: f32,
     pub phase: f32,
     pub phase_delta: f32,
+    last_sample: f32,
 }
 
 impl Oscillator {
@@ -30,6 +32,7 @@ impl Oscillator {
             freq: 0.0,
             phase: 0.0,
             phase_delta: 0.0,
+            last_sample: 0.0,
         }
     }
 
@@ -65,7 +68,13 @@ impl Oscillator {
     pub fn next_sample(&mut self) -> f32 {
         self.next_phase();
 
-        sample_for_phase(self.waveform, self.phase, self.phase_delta)
+        self.last_sample = sample_for_phase(
+            self.waveform,
+            self.phase,
+            self.phase_delta,
+            self.last_sample,
+        );
+        self.last_sample
     }
 }
 
@@ -79,7 +88,7 @@ impl Iterator for Oscillator {
 
 /// Logic pulled out of next_sample (and used there) for use with FM and other
 /// cases where phase may not just be self.phase
-pub fn sample_for_phase(waveform: Waveform, phase: f32, phase_delta: f32) -> f32 {
+pub fn sample_for_phase(waveform: Waveform, phase: f32, phase_delta: f32, last_sample: f32) -> f32 {
     match waveform {
         Sine => phase.sin(),
         Sawtooth => phase / PI - 1.0 + poly_blep(waveform, phase, phase_delta),
@@ -88,6 +97,14 @@ pub fn sample_for_phase(waveform: Waveform, phase: f32, phase_delta: f32) -> f32
                 true => 1.0,
                 false => -1.0,
             }) + poly_blep(waveform, phase, phase_delta)
+        }
+        Triangle => {
+            let base = (match phase < PI {
+                true => 1.0,
+                false => -1.0,
+            }) + poly_blep(waveform, phase, phase_delta);
+
+            phase_delta * base + (1.0 - phase_delta) * last_sample
         }
     }
 }
@@ -112,7 +129,7 @@ pub fn poly_blep(waveform: Waveform, phase: f32, phase_delta: f32) -> f32 {
 
     match waveform {
         Sawtooth => -1.0 * poly_blep_offset(t, dt),
-        Square => poly_blep_offset(t, dt) - poly_blep_offset((t + 0.5) % 1.0, dt),
+        Square | Triangle => poly_blep_offset(t, dt) - poly_blep_offset((t + 0.5) % 1.0, dt),
         _ => 0.0,
     }
 }
