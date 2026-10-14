@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 use heapless::Vec;
 
 use crate::{
-    buffer_pool::{self, BufferPool},
+    buffer_pool::BufferPool,
     effects::{
         EFFECT_COUNT, Effect, EffectSnapshot,
         chorus::Chorus,

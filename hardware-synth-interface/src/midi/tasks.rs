@@ -1,12 +1,9 @@
-use core::{cell::RefCell, sync::atomic::Ordering};
+use core::cell::RefCell;
 
-use embassy_sync::blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex};
 use embassy_time::Timer;
 use synth_core::{
     chain::Chain,
-    engines::fm::FMSynth,
-    midi::{MIDI_NOTE_FREQS, MidiMessage, get_pitch_bend_value},
-    voices::Voice,
+    midi::{MidiMessage, get_pitch_bend_value},
 };
 
 use crate::{SharedChain, midi::MIDI_BUFFER};

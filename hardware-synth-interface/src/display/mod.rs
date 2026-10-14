@@ -1,20 +1,10 @@
-use alloc::{collections::VecDeque, string::String};
-use core::cell::RefCell;
-use embassy_embedded_hal::shared_bus::blocking::i2c::I2cDevice;
-use embassy_stm32::i2c::I2c;
 use embassy_sync::{
-    blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex},
+    blocking_mutex::raw::CriticalSectionRawMutex,
     channel::Channel,
 };
 use embassy_time::Timer;
-use embedded_graphics::{
-    mono_font::{MonoTextStyle, ascii::FONT_6X10},
-    pixelcolor::BinaryColor,
-    prelude::*,
-    text::{Alignment, Text},
-};
+use embedded_graphics::prelude::*;
 use ssd1306::{Ssd1306, prelude::*};
-use synth_core::engines::fm::FMSynth;
 
 use crate::{
     SharedChain,

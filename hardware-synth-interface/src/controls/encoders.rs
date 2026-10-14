@@ -1,21 +1,8 @@
-use alloc::format;
-use core::cell::RefCell;
 use daisy_embassy::hal::{exti::ExtiInput, mode::Async};
-use embassy_sync::{
-    blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex},
-    signal::Signal,
-};
 use embassy_time::{Duration, Instant, Timer};
-use logger::serial_log;
-use synth_core::engines::fm::FMSynth;
 
 use crate::controls::{
-    CONTROL_BUFFER, ControlEvent, MODE,
-    Mode::{
-        EffectsDetail, EffectsMain, EngineEnvelope, EngineLFO, EngineMain, FiltersDetail,
-        FiltersMain,
-    },
-    engine_main_handler,
+    CONTROL_BUFFER, ControlEvent,
 };
 
 // static ENCODER1: Signal<CriticalSectionRawMutex, EncoderEvent> = Signal::new();

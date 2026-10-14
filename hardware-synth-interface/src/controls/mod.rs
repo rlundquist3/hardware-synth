@@ -1,29 +1,26 @@
 use core::cell::RefCell;
 
-use alloc::format;
 use embassy_sync::{
-    blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex},
+    blocking_mutex::raw::CriticalSectionRawMutex,
     channel::Channel,
     watch::Watch,
 };
-use logger::serial_log;
 use synth_core::{
     chain::Chain,
     effects::{EFFECT_COUNT, filters::FILTER_COUNT},
-    engines::fm::FMSynth,
     parameter::{
-        ParameterChange::{self, Decrement, Increment},
+        ParameterChange::{Decrement, Increment},
         UserParameters,
     },
 };
-use synth_gui::effects::effects_main::{EFFECT_CHUNK_COUNT, EFFECT_CHUNK_SIZE};
+use synth_gui::effects::effects_main::EFFECT_CHUNK_SIZE;
 
 use crate::{
     SharedChain,
     controls::ControlEvent::{
-        Encoder1Click, Encoder1Clockwise, Encoder1Counterclockwise, Encoder2Click,
-        Encoder2Clockwise, Encoder2Counterclockwise, Encoder3Click, Encoder3Clockwise,
-        Encoder3Counterclockwise, Encoder4Click, Encoder4Clockwise, Encoder4Counterclockwise,
+        Encoder1Click, Encoder1Clockwise, Encoder1Counterclockwise,
+        Encoder2Clockwise, Encoder2Counterclockwise, Encoder3Clockwise,
+        Encoder3Counterclockwise, Encoder4Clockwise, Encoder4Counterclockwise,
         NavigationDown, NavigationEnter, NavigationLeft, NavigationRight, NavigationUp,
     },
     display::DISPLAY_BUFFER,
@@ -71,13 +68,13 @@ pub static CONTROL_BUFFER: Channel<CriticalSectionRawMutex, ControlEvent, 16> = 
 #[embassy_executor::task]
 pub async fn control_handler(chain: &'static SharedChain) {
     let mut mode_rx = MODE.receiver().unwrap();
-    let mut mode_tx = MODE.sender();
+    let mode_tx = MODE.sender();
     mode_tx.send(Mode::EngineMain);
 
     let navigation_tx = NAVIGATION_LOCATION.sender();
     navigation_tx.send(0);
 
-    let mut buffer_rx = CONTROL_BUFFER.receiver();
+    let buffer_rx = CONTROL_BUFFER.receiver();
 
     loop {
         let control_event = buffer_rx.receive().await;
@@ -97,7 +94,7 @@ pub async fn control_handler(chain: &'static SharedChain) {
 }
 
 async fn engine_main_handler(chain: &'static SharedChain, control_event: ControlEvent) {
-    let mut mode_tx = MODE.sender();
+    let mode_tx = MODE.sender();
     match control_event {
         NavigationRight => {
             mode_tx.send(Mode::EngineLFO);

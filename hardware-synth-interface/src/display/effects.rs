@@ -1,7 +1,6 @@
 use core::cell::RefCell;
 
 use embedded_graphics::{Drawable, geometry::Dimensions};
-use heapless::Vec;
 use synth_core::chain::Chain;
 use synth_gui::effects::{effects_detail::EffectsDetailLayout, effects_main::EffectsMainLayout};
 

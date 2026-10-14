@@ -8,7 +8,6 @@ pub mod reverb;
 pub mod soft_clipper;
 pub mod vibrato;
 
-use alloc::boxed::Box;
 use heapless::Vec;
 
 use crate::parameter::{Parameter, UserParameters};

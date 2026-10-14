@@ -15,7 +15,7 @@ use core::{cell::RefCell, slice::from_raw_parts_mut};
 use daisy_embassy::{
     default_rcc,
     hal::{
-        self, bind_interrupts,
+        bind_interrupts,
         exti::{self, ExtiInput},
         gpio::Pull,
         i2c::{Config, I2c},

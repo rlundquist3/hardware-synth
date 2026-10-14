@@ -1,10 +1,8 @@
-use alloc::{format, vec::Vec};
+use alloc::vec::Vec;
 use core::cell::RefCell;
-use embassy_sync::blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex};
 use embedded_graphics::{Drawable, geometry::Dimensions};
 use synth_core::{
     chain::Chain,
-    engines::fm::FMSynth,
     parameter::{Parameter, UserParameters},
 };
 use synth_gui::{engines::fm::EngineMainLayout, envelope::EnvelopeLayout, lfo::LfoLayout};

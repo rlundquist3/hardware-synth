@@ -1,8 +1,6 @@
 use crate::buffer_pool::BufferPool;
 use crate::effects::EffectComponent;
 
-const MAX_DELAY_SECS: f32 = 1.0;
-
 #[derive(Debug)]
 pub struct UCF {
     buffer: &'static mut [f32],
