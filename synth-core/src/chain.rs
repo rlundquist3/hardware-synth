@@ -1,3 +1,5 @@
+use core::array;
+
 use alloc::boxed::Box;
 use heapless::Vec;
 
@@ -14,18 +16,21 @@ use crate::{
         soft_clipper::SoftClipper,
         vibrato::Vibrato,
     },
-    engines::Engine,
+    engines::{ENGINE_COUNT, Engine, dual::DualOsc, fm::FMSynth},
 };
 
 pub struct Chain {
-    engine: Box<dyn Engine>,
+    pub current_engine_index: usize,
     // TODO: if this feels weird or causes a memory issue, use Vec<EnumOfAllFilters, Count> instead (same for effects)
+    engines: Vec<Box<dyn Engine>, ENGINE_COUNT>,
     filters: Vec<Box<dyn Effect>, FILTER_COUNT>,
     effects: Vec<Box<dyn Effect>, EFFECT_COUNT>,
 }
 
 impl Chain {
-    pub fn new(engine: Box<dyn Engine>, buffer_pool: &mut BufferPool) -> Self {
+    pub fn new(buffer_pool: &mut BufferPool) -> Self {
+        let engines: Vec<Box<dyn Engine>, ENGINE_COUNT> =
+            Vec::from_array([Box::new(FMSynth::new()), Box::new(DualOsc::new())]);
         let filters: Vec<Box<dyn Effect>, FILTER_COUNT> = Vec::from_array([
             Box::new(low_pass::new(200.0, 1.0)),
             Box::new(high_pass::new(1000.0, 1.0)),
@@ -42,18 +47,23 @@ impl Chain {
         ]);
 
         Chain {
-            engine,
+            current_engine_index: 1,
+            engines,
             filters,
             effects,
         }
     }
 
-    pub fn set_engine(&mut self, engine: Box<dyn Engine>) {
-        self.engine = engine;
+    pub fn set_engine(&mut self, index: usize) {
+        self.current_engine_index = index;
     }
 
     pub fn get_engine(&mut self) -> &mut dyn Engine {
-        self.engine.as_mut()
+        self.engines[self.current_engine_index].as_mut()
+    }
+
+    pub fn get_engine_list(&self) -> [&'static str; ENGINE_COUNT] {
+        array::from_fn(|index| self.engines[index].get_name())
     }
 
     pub fn get_filters(&mut self) -> &mut Vec<Box<dyn Effect>, FILTER_COUNT> {
@@ -83,7 +93,9 @@ impl Iterator for Chain {
     type Item = f32;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let raw = self.engine.next().unwrap_or(0.0);
+        let raw = self.engines[self.current_engine_index]
+            .next()
+            .unwrap_or(0.0);
         let filtered = self
             .filters
             .iter_mut()

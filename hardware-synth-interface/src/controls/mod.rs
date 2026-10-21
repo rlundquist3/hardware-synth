@@ -1,27 +1,25 @@
+use alloc::format;
 use core::cell::RefCell;
-
-use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex,
-    channel::Channel,
-    watch::Watch,
-};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, watch::Watch};
+use logger::serial_log;
 use synth_core::{
     chain::Chain,
     effects::{EFFECT_COUNT, filters::FILTER_COUNT},
-    parameter::{
-        ParameterChange::{Decrement, Increment},
-        UserParameters,
-    },
+    engines::ENGINE_COUNT,
+    parameter::ParameterChange::{Decrement, Increment},
 };
-use synth_gui::effects::effects_main::EFFECT_CHUNK_SIZE;
+use synth_gui::{
+    effects::effects_list::EFFECT_CHUNK_SIZE,
+    engines::list::{ENGINE_CHUNK_COUNT, ENGINE_CHUNK_SIZE},
+};
 
 use crate::{
     SharedChain,
     controls::ControlEvent::{
-        Encoder1Click, Encoder1Clockwise, Encoder1Counterclockwise,
-        Encoder2Clockwise, Encoder2Counterclockwise, Encoder3Clockwise,
-        Encoder3Counterclockwise, Encoder4Clockwise, Encoder4Counterclockwise,
-        NavigationDown, NavigationEnter, NavigationLeft, NavigationRight, NavigationUp,
+        Encoder1Click, Encoder1Clockwise, Encoder1Counterclockwise, Encoder2Clockwise,
+        Encoder2Counterclockwise, Encoder3Clockwise, Encoder3Counterclockwise, Encoder4Clockwise,
+        Encoder4Counterclockwise, NavigationDown, NavigationEnter, NavigationLeft, NavigationRight,
+        NavigationUp,
     },
     display::DISPLAY_BUFFER,
 };
@@ -31,12 +29,13 @@ pub mod encoders;
 
 #[derive(Clone, Debug)]
 pub enum Mode {
+    EngineList,
     EngineMain,
     EngineEnvelope,
     EngineLFO,
-    FiltersMain,
+    FiltersList,
     FiltersDetail,
-    EffectsMain,
+    EffectsList,
     EffectsDetail,
 }
 pub static MODE: Watch<CriticalSectionRawMutex, Mode, 2> = Watch::new();
@@ -79,17 +78,81 @@ pub async fn control_handler(chain: &'static SharedChain) {
     loop {
         let control_event = buffer_rx.receive().await;
 
+        serial_log(&format!("{:?}", control_event));
         let mode = mode_rx.get().await;
         match mode {
+            Mode::EngineList => engine_list_handler(chain, control_event).await,
             Mode::EngineMain => engine_main_handler(chain, control_event).await,
             Mode::EngineLFO => engine_lfo_handler(chain, control_event).await,
             Mode::EngineEnvelope => engine_envelope_handler(chain, control_event).await,
-            Mode::FiltersMain => filters_main_handler(chain, control_event).await,
+            Mode::FiltersList => filters_list_handler(chain, control_event).await,
             Mode::FiltersDetail => filters_detail_handler(chain, control_event).await,
-            Mode::EffectsMain => effects_main_handler(chain, control_event).await,
+            Mode::EffectsList => effects_list_handler(chain, control_event).await,
             Mode::EffectsDetail => effects_detail_handler(chain, control_event).await,
         }
         DISPLAY_BUFFER.send(2).await;
+    }
+}
+
+async fn engine_list_handler(chain: &'static SharedChain, control_event: ControlEvent) {
+    let mode_tx = MODE.sender();
+    let navigation_tx = NAVIGATION_LOCATION.sender();
+    let mut navigation_rx = NAVIGATION_LOCATION.receiver().unwrap();
+
+    let navigation_location = navigation_rx.get().await;
+    match navigation_location {
+        0 => match control_event {
+            NavigationRight => {
+                mode_tx.send(Mode::EngineMain);
+                return;
+            }
+            NavigationUp => {
+                navigation_tx.send(1);
+                return;
+            }
+            _ => {}
+        },
+        _ => match control_event {
+            NavigationUp => {
+                if navigation_location % ENGINE_CHUNK_SIZE != 1 {
+                    navigation_tx.send(navigation_location - 1);
+                };
+                return;
+            }
+            NavigationDown => {
+                if navigation_location % ENGINE_CHUNK_SIZE != 0
+                    && navigation_location < ENGINE_COUNT
+                {
+                    navigation_tx.send(navigation_location + 1);
+                } else {
+                    navigation_tx.send(0);
+                }
+                return;
+            }
+            NavigationLeft => {
+                if navigation_location > ENGINE_CHUNK_SIZE {
+                    navigation_tx.send(navigation_location - ENGINE_COUNT);
+                }
+                return;
+            }
+            NavigationRight => {
+                if navigation_location < ENGINE_CHUNK_COUNT * ENGINE_CHUNK_SIZE {
+                    navigation_tx.send(navigation_location + ENGINE_CHUNK_SIZE);
+                }
+                return;
+            }
+            NavigationEnter => {
+                chain.lock(|c: &RefCell<Chain>| {
+                    let mut chain = c.borrow_mut();
+                    chain.set_engine(navigation_location - 1);
+
+                    mode_tx.send(Mode::EngineMain);
+                });
+
+                return;
+            }
+            _ => {}
+        },
     }
 }
 
@@ -159,7 +222,7 @@ async fn engine_envelope_handler(chain: &'static SharedChain, control_event: Con
             return;
         }
         NavigationRight => {
-            mode_tx.send(Mode::FiltersMain);
+            mode_tx.send(Mode::FiltersList);
             return;
         }
         _ => {}
@@ -184,7 +247,7 @@ async fn engine_envelope_handler(chain: &'static SharedChain, control_event: Con
     };
 }
 
-async fn filters_main_handler(_chain: &'static SharedChain, control_event: ControlEvent) {
+async fn filters_list_handler(_chain: &'static SharedChain, control_event: ControlEvent) {
     let mode_tx = MODE.sender();
     let navigation_tx = NAVIGATION_LOCATION.sender();
     let mut navigation_rx = NAVIGATION_LOCATION.receiver().unwrap();
@@ -197,7 +260,7 @@ async fn filters_main_handler(_chain: &'static SharedChain, control_event: Contr
                 return;
             }
             NavigationRight => {
-                mode_tx.send(Mode::EffectsMain);
+                mode_tx.send(Mode::EffectsList);
                 return;
             }
             NavigationUp => {
@@ -246,7 +309,7 @@ async fn filters_detail_handler(chain: &'static SharedChain, control_event: Cont
         _ => match control_event {
             NavigationEnter => {
                 navigation_tx.send(0);
-                mode_tx.send(Mode::FiltersMain);
+                mode_tx.send(Mode::FiltersList);
                 return;
             }
             _ => {}
@@ -282,7 +345,7 @@ async fn filters_detail_handler(chain: &'static SharedChain, control_event: Cont
     };
 }
 
-async fn effects_main_handler(_chain: &'static SharedChain, control_event: ControlEvent) {
+async fn effects_list_handler(_chain: &'static SharedChain, control_event: ControlEvent) {
     let mode_tx = MODE.sender();
     let navigation_tx = NAVIGATION_LOCATION.sender();
     let mut navigation_rx = NAVIGATION_LOCATION.receiver().unwrap();
@@ -291,7 +354,7 @@ async fn effects_main_handler(_chain: &'static SharedChain, control_event: Contr
     match navigation_location {
         0 => match control_event {
             NavigationLeft => {
-                mode_tx.send(Mode::FiltersMain);
+                mode_tx.send(Mode::FiltersList);
                 return;
             }
             NavigationRight => {}
@@ -350,7 +413,7 @@ async fn effects_detail_handler(chain: &'static SharedChain, control_event: Cont
         _ => match control_event {
             NavigationEnter => {
                 navigation_tx.send(0);
-                mode_tx.send(Mode::EffectsMain);
+                mode_tx.send(Mode::EffectsList);
                 return;
             }
             _ => {}

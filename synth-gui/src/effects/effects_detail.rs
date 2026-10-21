@@ -67,7 +67,7 @@ impl Drawable for EffectsDetailLayout {
             .arrange();
 
         let text = Text::new(effect.name, Point::zero(), SMALL_TEXT_STYLE);
-        let footer = FooterMenu::new(["back", "", "", "", ""], 0);
+        let footer = FooterMenu::new(["<-", "", "", "", "", ""], 0);
 
         LinearLayout::vertical(Chain::new(text).append(controls).append(footer))
             .with_alignment(horizontal::Center)

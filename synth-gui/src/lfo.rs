@@ -70,7 +70,7 @@ impl Drawable for LfoLayout {
             vertical::Center,
         ));
 
-        let footer = FooterMenu::new(["main", "lfo", "env", "fltr", "fx"], 1);
+        let footer = FooterMenu::new(["<-", "main", "lfo", "env", "fltr", "fx"], 2);
 
         LinearLayout::vertical(Chain::new(plot).append(footer))
             .with_alignment(horizontal::Center)

@@ -42,7 +42,7 @@ impl<'a> Item<'a> {
         let container = Rectangle::new(
             Point::zero(),
             Size {
-                width: 25,
+                width: 20,
                 height: 10,
             },
         )
@@ -58,13 +58,13 @@ impl<'a> Item<'a> {
 }
 
 pub struct FooterMenu<'a> {
-    names: [&'a str; 5],
+    names: [&'a str; 6],
     active_index: usize,
     position: Point,
 }
 
 impl<'a> FooterMenu<'a> {
-    pub fn new(names: [&'a str; 5], active_index: usize) -> Self {
+    pub fn new(names: [&'a str; 6], active_index: usize) -> Self {
         FooterMenu {
             names,
             active_index,
@@ -78,7 +78,8 @@ impl<'a> FooterMenu<'a> {
                 .append(Item::new(self.names[1], self.active_index == 1).format())
                 .append(Item::new(self.names[2], self.active_index == 2).format())
                 .append(Item::new(self.names[3], self.active_index == 3).format())
-                .append(Item::new(self.names[4], self.active_index == 4).format()),
+                .append(Item::new(self.names[4], self.active_index == 4).format())
+                .append(Item::new(self.names[5], self.active_index == 5).format()),
         )
         .with_spacing(spacing::Tight)
         .arrange()

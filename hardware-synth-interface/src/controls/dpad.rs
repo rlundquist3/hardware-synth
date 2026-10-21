@@ -1,3 +1,4 @@
+use alloc::format;
 use daisy_embassy::hal::{exti::ExtiInput, mode::Async};
 use embassy_time::Timer;
 use embedded_hal::i2c::I2c as _;

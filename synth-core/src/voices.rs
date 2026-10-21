@@ -5,6 +5,7 @@ use alloc::{
 
 pub trait Voice: Clone + Send + Iterator<Item = f32> {
     fn set_freq(&mut self, freq: f32, midi_note: usize);
+    fn set_pitch_bend(&mut self, midi_bend: u16);
 }
 
 #[derive(Clone, Debug)]

@@ -2,7 +2,7 @@ use core::cell::RefCell;
 
 use embedded_graphics::{Drawable, geometry::Dimensions};
 use synth_core::chain::Chain;
-use synth_gui::effects::{filters_detail::FiltersDetailLayout, filters_main::FiltersMainLayout};
+use synth_gui::effects::{filters_detail::FiltersDetailLayout, filters_list::FiltersListLayout};
 
 use crate::{
     SharedChain,
@@ -10,7 +10,7 @@ use crate::{
     display::{Display, DisplayError},
 };
 
-pub async fn render_filters_main(
+pub async fn render_filters_list(
     display: &mut Display,
     chain: &'static SharedChain,
 ) -> Result<(), DisplayError> {
@@ -21,7 +21,7 @@ pub async fn render_filters_main(
 
     let filters_snapshot = chain.lock(|c: &RefCell<Chain>| c.borrow().get_filters_snapshot());
 
-    FiltersMainLayout::new(filters_snapshot, display_area, navigation_location).draw(display)
+    FiltersListLayout::new(filters_snapshot, display_area, navigation_location).draw(display)
 }
 
 pub async fn render_filters_detail(

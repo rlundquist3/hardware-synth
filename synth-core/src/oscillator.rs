@@ -45,6 +45,13 @@ impl Oscillator {
         self.freq = freq;
     }
 
+    pub fn set_phase(&mut self, mut phase: f32) {
+        if phase >= 2.0 * PI {
+            phase -= 2.0 * PI;
+        }
+        self.phase = phase;
+    }
+
     pub fn next_phase(&mut self) -> f32 {
         self.phase += self.phase_delta;
         if self.phase >= 2.0 * PI {
@@ -53,6 +60,8 @@ impl Oscillator {
 
         self.phase
     }
+
+    // TODO: evaluate moving LFO into oscillator so engines can just call next_phase/next_sample and DRY things up.
 
     pub fn next_phase_with_mod(&mut self, modulation: f32) -> f32 {
         let delta = self.freq * (1.0 + modulation) * 2.0 * PI / (SAMPLE_RATE as f32);
@@ -67,6 +76,18 @@ impl Oscillator {
 
     pub fn next_sample(&mut self) -> f32 {
         self.next_phase();
+
+        self.last_sample = sample_for_phase(
+            self.waveform,
+            self.phase,
+            self.phase_delta,
+            self.last_sample,
+        );
+        self.last_sample
+    }
+
+    pub fn next_sample_with_mod(&mut self, modulation: f32) -> f32 {
+        self.next_phase_with_mod(modulation);
 
         self.last_sample = sample_for_phase(
             self.waveform,

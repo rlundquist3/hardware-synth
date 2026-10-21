@@ -15,7 +15,7 @@ use synth_core::parameter::Parameter;
 
 use crate::{footer::FooterMenu, shared::SMALL_TEXT_STYLE};
 
-pub struct EngineMainLayout {
+pub struct FMLayout {
     waveform: String<8>,
     c: String<8>,
     m: String<8>,
@@ -23,7 +23,7 @@ pub struct EngineMainLayout {
     display_area: Rectangle,
 }
 
-impl EngineMainLayout {
+impl FMLayout {
     pub fn new(parameters: &[Parameter], display_area: Rectangle) -> Self {
         let mut waveform: String<8> = String::new();
         let mut c: String<8> = String::new();
@@ -45,7 +45,7 @@ impl EngineMainLayout {
         write!(m, "{:.0}", parameters[2].get_value()).unwrap();
         write!(i, "{:.0}", parameters[3].get_value()).unwrap();
 
-        EngineMainLayout {
+        FMLayout {
             waveform,
             c,
             m,
@@ -55,7 +55,7 @@ impl EngineMainLayout {
     }
 }
 
-impl Drawable for EngineMainLayout {
+impl Drawable for FMLayout {
     type Color = BinaryColor;
     type Output = ();
 
@@ -81,7 +81,7 @@ impl Drawable for EngineMainLayout {
                 .with_alignment(vertical::Center)
                 .with_spacing(spacing::DistributeFill(120))
                 .arrange();
-        let footer = FooterMenu::new(["main", "lfo", "env", "fltr", "fx"], 0);
+        let footer = FooterMenu::new(["<-", "main", "lfo", "env", "fltr", "fx"], 1);
 
         LinearLayout::vertical(Chain::new(engine_params).append(footer))
             .with_alignment(horizontal::Center)

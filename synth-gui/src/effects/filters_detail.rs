@@ -15,7 +15,7 @@ use synth_core::effects::{
 use crate::{
     effects::{
         controls::Dial,
-        filters_main::{FilterDiagram, FilterTypes},
+        filters_list::{FilterDiagram, FilterTypes},
     },
     footer::FooterMenu,
 };
@@ -84,7 +84,7 @@ impl Drawable for FiltersDetailLayout {
             .with_spacing(spacing::DistributeFill(120))
             .arrange();
 
-        let footer = FooterMenu::new(["back", "", "", "", ""], 0);
+        let footer = FooterMenu::new(["<-", "", "", "", "", ""], 0);
         LinearLayout::vertical(Chain::new(parameters).append(footer))
             .with_alignment(horizontal::Center)
             .with_spacing(spacing::DistributeFill(60))

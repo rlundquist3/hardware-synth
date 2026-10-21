@@ -2,7 +2,7 @@ use core::cell::RefCell;
 
 use embedded_graphics::{Drawable, geometry::Dimensions};
 use synth_core::chain::Chain;
-use synth_gui::effects::{effects_detail::EffectsDetailLayout, effects_main::EffectsMainLayout};
+use synth_gui::effects::{effects_detail::EffectsDetailLayout, effects_list::EffectsListLayout};
 
 use crate::{
     SharedChain,
@@ -10,7 +10,7 @@ use crate::{
     display::{Display, DisplayError},
 };
 
-pub async fn render_effects_main(
+pub async fn render_effects_list(
     display: &mut Display,
     chain: &'static SharedChain,
 ) -> Result<(), DisplayError> {
@@ -21,7 +21,7 @@ pub async fn render_effects_main(
 
     let effects_snapshot = chain.lock(|c: &RefCell<Chain>| c.borrow().get_effects_snapshot());
 
-    EffectsMainLayout::new(effects_snapshot, display_area, navigation_location).draw(display)
+    EffectsListLayout::new(effects_snapshot, display_area, navigation_location).draw(display)
 }
 
 pub async fn render_effects_detail(

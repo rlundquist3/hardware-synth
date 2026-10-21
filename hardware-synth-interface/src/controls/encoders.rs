@@ -1,9 +1,7 @@
 use daisy_embassy::hal::{exti::ExtiInput, mode::Async};
 use embassy_time::{Duration, Instant, Timer};
 
-use crate::controls::{
-    CONTROL_BUFFER, ControlEvent,
-};
+use crate::controls::{CONTROL_BUFFER, ControlEvent};
 
 // static ENCODER1: Signal<CriticalSectionRawMutex, EncoderEvent> = Signal::new();
 
@@ -111,9 +109,9 @@ pub async fn encoder_click_handler(encoder_index: usize, mut sw: ExtiInput<'stat
 //             EngineMain => engine_main_handler(engine, control_event).await,
 //             EngineEnvelope => {}
 //             EngineLFO => {}
-//             FiltersMain => {}
+//             FiltersList => {}
 //             FiltersDetail => {}
-//             EffectsMain => {}
+//             EffectsList => {}
 //             EffectsDetail => {}
 //         }
 //     }

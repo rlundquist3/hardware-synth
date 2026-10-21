@@ -64,7 +64,7 @@ impl Drawable for EnvelopeLayout {
 
         let envelope = Polyline::new(&points).into_styled(LINE_STYLE);
 
-        let footer = FooterMenu::new(["main", "lfo", "env", "fltr", "fx"], 2);
+        let footer = FooterMenu::new(["<-", "main", "lfo", "env", "fltr", "fx"], 3);
 
         LinearLayout::vertical(Chain::new(envelope).append(footer))
             .with_alignment(horizontal::Center)

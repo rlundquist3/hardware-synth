@@ -79,7 +79,7 @@ impl Engine for FMSynth {
         self.envelope.get_parameters()
     }
 
-    fn get_name(&self) -> &str {
+    fn get_name(&self) -> &'static str {
         "FM"
     }
 }

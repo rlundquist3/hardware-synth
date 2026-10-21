@@ -1,8 +1,6 @@
 # hardware-synth
 
-### Work in Progress
-
-Firmware for a synthesizer, written to run on the [Daisy Seed 3](https://daisy.audio/products/seed3).
+Firmware for a synthesizer, written to run on the [Daisy Seed 3](https://daisy.audio/products/seed3). To run locally, see https://github.com/rlundquist3/synth-desktop-simulator.
 
 ### Hardware
 
@@ -31,9 +29,8 @@ Once the bootloader is flashed, to flash the firmware:
   - this just keeps it ready to flash; otherwise, there's a just a 2 second window
   - LED should keep pulsing
 - `just flash-firmware`
-- once that starts going, "BOOT" can be released (i.e. not necessary to wait for it to finish)
 
-**Could be flashed using `probe-rs` with a debug probe connected to the Daisy's Cortex-10 pinout.**
+**Could alternatively be flashed using `probe-rs` with a debug probe connected to the Daisy's Cortex-10 pinout.**
 
 ---
 

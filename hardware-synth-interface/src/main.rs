@@ -51,7 +51,7 @@ use crate::{
 };
 use logger::{log_handler, serial_log};
 use rust_tinyusb_host::tusb_int_handler;
-use synth_core::{buffer_pool::BufferPool, chain::Chain, engines::fm::FMSynth};
+use synth_core::{buffer_pool::BufferPool, chain::Chain};
 
 bind_interrupts!(struct Irqs {
     USART1 => usart::InterruptHandler<peripherals::USART1>;
@@ -137,7 +137,6 @@ async fn main(low_priority_spawner: Spawner) {
         .await;
     let audio_interface = (audio_interface.start_interface().await).unwrap();
     let chain = CHAIN.init(BlockingMutex::new(RefCell::new(Chain::new(
-        Box::new(FMSynth::new()),
         &mut buffer_pool,
     ))));
 

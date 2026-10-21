@@ -18,9 +18,10 @@ pub struct FMSynthVoice {
     mod_osc: Oscillator,
     lfo_amp: f32,
     lfo: Oscillator,
+    last_sample: f32,
+
     pub envelope: AmpEnvelope,
     pub on: Arc<AtomicBool>,
-    last_sample: f32,
 }
 
 impl FMSynthVoice {
@@ -81,12 +82,6 @@ impl FMSynthVoice {
         self.lfo.set_freq(freq);
     }
 
-    pub fn set_pitch_bend(&mut self, midi_bend: u16) {
-        let bent_freq = get_linear_bent_freq(self.midi_note, midi_bend, 2);
-
-        self.set_osc_freqs(bent_freq);
-    }
-
     pub fn set_releasing(&mut self) {
         self.envelope.set_releasing();
     }
@@ -99,9 +94,9 @@ impl FMSynthVoice {
         self.envelope.get_release_complete()
     }
 
-    // fn get_mod_amp(self) -> f32 {
-    //     self.mod_index * self.mod_osc.freq
-    // }
+    fn get_mod_amp(self) -> f32 {
+        self.mod_index * self.mod_osc.freq
+    }
 }
 
 impl Clone for FMSynthVoice {
@@ -128,6 +123,12 @@ impl Voice for FMSynthVoice {
         self.midi_note = midi_note;
 
         self.set_osc_freqs(freq);
+    }
+
+    fn set_pitch_bend(&mut self, midi_bend: u16) {
+        let bent_freq = get_linear_bent_freq(self.midi_note, midi_bend, 2);
+
+        self.set_osc_freqs(bent_freq);
     }
 }
 
