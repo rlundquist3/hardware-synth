@@ -10,7 +10,6 @@ mod midi;
 mod panic;
 
 extern crate alloc;
-use alloc::boxed::Box;
 use core::{cell::RefCell, slice::from_raw_parts_mut};
 use daisy_embassy::{
     default_rcc,
@@ -30,7 +29,7 @@ use defmt_serial as _;
 use embassy_embedded_hal::shared_bus::blocking::i2c::I2cDevice;
 use embassy_executor::{InterruptExecutor, Spawner};
 use embassy_sync::blocking_mutex::{Mutex as BlockingMutex, raw::CriticalSectionRawMutex};
-use embassy_time::Delay;
+use embassy_time::{Delay, Timer};
 use ssd1306::{I2CDisplayInterface, Ssd1306, prelude::*};
 use static_cell::StaticCell;
 
@@ -146,7 +145,7 @@ async fn main(low_priority_spawner: Spawner) {
     audio_executor.spawn(midi_buffer_handler(chain).unwrap());
 
     // Comment this out to stop middle C heartbeat
-    audio_executor.spawn(midi_heartbeat(chain).unwrap());
+    // audio_executor.spawn(midi_heartbeat(chain).unwrap());
 
     serial_log("Audio Initialized");
     // End audio setup
@@ -174,18 +173,18 @@ async fn main(low_priority_spawner: Spawner) {
     // End I2C setup
 
     // Start control setup
-    let clk_1 = ExtiInput::new(board.pins.d1, peripherals.EXTI11, Pull::Up, Irqs);
-    let dt_1 = ExtiInput::new(board.pins.d2, peripherals.EXTI10, Pull::Up, Irqs);
-    let sw_1 = ExtiInput::new(board.pins.d3, peripherals.EXTI9, Pull::Up, Irqs);
-    let clk_2 = ExtiInput::new(board.pins.d4, peripherals.EXTI8, Pull::Up, Irqs);
-    let dt_2 = ExtiInput::new(board.pins.d5, peripherals.EXTI2, Pull::Up, Irqs);
-    let sw_2 = ExtiInput::new(board.pins.d6, peripherals.EXTI12, Pull::Up, Irqs);
-    let clk_3 = ExtiInput::new(board.pins.d15, peripherals.EXTI0, Pull::Up, Irqs);
-    let dt_3 = ExtiInput::new(board.pins.d16, peripherals.EXTI3, Pull::Up, Irqs);
-    let sw_3 = ExtiInput::new(board.pins.d17, peripherals.EXTI1, Pull::Up, Irqs);
-    let clk_4 = ExtiInput::new(board.pins.d18, peripherals.EXTI7, Pull::Up, Irqs);
-    let dt_4 = ExtiInput::new(board.pins.d19, peripherals.EXTI6, Pull::Up, Irqs);
-    let sw_4 = ExtiInput::new(board.pins.d21, peripherals.EXTI4, Pull::Up, Irqs);
+    let sw_1 = ExtiInput::new(board.pins.d1, peripherals.EXTI11, Pull::Up, Irqs);
+    let clk_1 = ExtiInput::new(board.pins.d2, peripherals.EXTI10, Pull::Up, Irqs);
+    let dt_1 = ExtiInput::new(board.pins.d3, peripherals.EXTI9, Pull::Up, Irqs);
+    let sw_2 = ExtiInput::new(board.pins.d4, peripherals.EXTI8, Pull::Up, Irqs);
+    let clk_2 = ExtiInput::new(board.pins.d5, peripherals.EXTI2, Pull::Up, Irqs);
+    let dt_2 = ExtiInput::new(board.pins.d6, peripherals.EXTI12, Pull::Up, Irqs);
+    let sw_3 = ExtiInput::new(board.pins.d21, peripherals.EXTI4, Pull::Up, Irqs);
+    let clk_3 = ExtiInput::new(board.pins.d19, peripherals.EXTI6, Pull::Up, Irqs);
+    let dt_3 = ExtiInput::new(board.pins.d18, peripherals.EXTI7, Pull::Up, Irqs);
+    let sw_4 = ExtiInput::new(board.pins.d17, peripherals.EXTI1, Pull::Up, Irqs);
+    let clk_4 = ExtiInput::new(board.pins.d16, peripherals.EXTI3, Pull::Up, Irqs);
+    let dt_4 = ExtiInput::new(board.pins.d15, peripherals.EXTI0, Pull::Up, Irqs);
 
     let dpad_interrupt = ExtiInput::new(board.pins.d10, peripherals.EXTI5, Pull::Up, Irqs);
     low_priority_spawner.spawn(dpad_handler(dpad_interrupt, dpad_i2c).unwrap());
@@ -209,7 +208,16 @@ async fn main(low_priority_spawner: Spawner) {
         DisplayRotation::Rotate0,
     )
     .into_buffered_graphics_mode();
-    display.init().unwrap();
+
+    // Retry rather than panic: this panel can NACK a first write and accept the
+    // next one, and a dropped init is not worth taking the synth down for.
+    for _ in 0..3 {
+        if display.init().is_ok() {
+            break;
+        }
+
+        Timer::after_millis(50).await;
+    }
 
     low_priority_spawner.spawn(display_handler(display, chain).unwrap());
     DISPLAY_BUFFER.send(1).await;

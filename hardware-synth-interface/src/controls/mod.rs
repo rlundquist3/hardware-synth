@@ -159,6 +159,10 @@ async fn engine_list_handler(chain: &'static SharedChain, control_event: Control
 async fn engine_main_handler(chain: &'static SharedChain, control_event: ControlEvent) {
     let mode_tx = MODE.sender();
     match control_event {
+        NavigationLeft => {
+            mode_tx.send(Mode::EngineList);
+            return;
+        }
         NavigationRight => {
             mode_tx.send(Mode::EngineLFO);
             return;
